@@ -14,11 +14,13 @@
  */
 package org.bonitasoft.console.client.admin.process.view;
 
-import static java.util.Arrays.*;
-import static org.bonitasoft.web.rest.model.bpm.process.ProcessItem.*;
-import static org.bonitasoft.web.toolkit.client.common.i18n.AbstractI18n.*;
+import static java.util.Arrays.asList;
+import static org.bonitasoft.web.rest.model.bpm.process.ProcessItem.ATTRIBUTE_ACTIVATION_STATE;
+import static org.bonitasoft.web.rest.model.bpm.process.ProcessItem.VALUE_ACTIVATION_STATE_DISABLED;
+import static org.bonitasoft.web.rest.model.bpm.process.ProcessItem.VALUE_ACTIVATION_STATE_ENABLED;
+import static org.bonitasoft.web.toolkit.client.common.i18n.AbstractI18n._;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -50,29 +52,20 @@ import org.bonitasoft.web.toolkit.client.ui.utils.DateFormat;
 /**
  * @author Haojie Yuan, Zhiheng Yang
  */
-public class ProcessListingAdminPage extends ItemListingPage<ProcessItem>
-{
+public class ProcessListingAdminPage extends ItemListingPage<ProcessItem> {
 
     public static final String TOKEN = "processlistingadmin";
 
-    public static final List<String> PRIVILEGES = new ArrayList<String>();
-
-    static {
-        PRIVILEGES.add(ProcessListingAdminPage.TOKEN);
-        PRIVILEGES.add("reportlistingadminext");
-    }
-
-    private static final String TABLE_ACTION_DISABLE = "actiondisableprocesses";
-
-    protected static final String TABLE_ACTION_ENABLE = "actionenableprocesses";
-
-    protected static final String TABLE_ACTION_DELETE = "actiondeleteprocesses";
+    public static final List<String> PRIVILEGES = Arrays.asList(ProcessListingAdminPage.TOKEN, "reportlistingadminext");
 
     private static final String TABLE_NO_ACTION = "noactionprocesses";
+    private static final String TABLE_ACTION_DISABLE = "actiondisableprocesses";
+    protected static final String TABLE_ACTION_ENABLE = "actionenableprocesses";
+    protected static final String TABLE_ACTION_DELETE = "actiondeleteprocesses";
 
     @Override
     public void defineTitle() {
-        this.setTitle(_("App"));
+        this.setTitle(_("Process"));
     }
 
     @Override
@@ -81,7 +74,7 @@ public class ProcessListingAdminPage extends ItemListingPage<ProcessItem>
     }
 
     private Clickable installNewAppLink() {
-        return new Link(_("Install"), _("Opens a popup to install an app"),
+        return new Link(_("Install"), _("Opens a popup to install a process"),
                 new CheckValidSessionBeforeAction(new ActionShowPopup(new UploadProcessPage())));
     }
 
@@ -96,23 +89,23 @@ public class ProcessListingAdminPage extends ItemListingPage<ProcessItem>
     }
 
     private ItemListingFilter newEnabledProcessesFilter() {
-        return new ItemListingFilter("enabledprocesses", _("Enabled"), _("Enabled Apps"), TABLE_ACTION_DISABLE)
+        return new ItemListingFilter("enabledprocesses", _("Enabled"), _("Enabled processes"), TABLE_ACTION_DISABLE)
                 .addFilter(ATTRIBUTE_ACTIVATION_STATE, VALUE_ACTIVATION_STATE_ENABLED);
     }
 
     private ItemListingFilter newDisabledProcessesFilter() {
-        return new ItemListingFilter("disabledprocesses", _("Disabled"), _("Disabled Apps"), TABLE_ACTION_DELETE)
+        return new ItemListingFilter("disabledprocesses", _("Disabled"), _("Disabled processes"), TABLE_ACTION_DELETE)
                 .addFilter(ATTRIBUTE_ACTIVATION_STATE, VALUE_ACTIVATION_STATE_DISABLED);
     }
 
     private ItemListingFilter newResolvedProcessesFilter() {
-        return new ItemListingFilter("resolvedprocesses", _("Resolved"), _("Resolved Apps"), TABLE_ACTION_ENABLE)
+        return new ItemListingFilter("resolvedprocesses", _("Resolved"), _("Resolved processes"), TABLE_ACTION_ENABLE)
                 .addFilter(ATTRIBUTE_ACTIVATION_STATE, VALUE_ACTIVATION_STATE_DISABLED)
                 .addFilter(ProcessItem.ATTRIBUTE_CONFIGURATION_STATE, ProcessItem.VALUE_CONFIGURATION_STATE_RESOLVED);
     }
 
     private ItemListingFilter newUnresolvedProcessesFilter() {
-        return new ItemListingFilter("unresolvedprocesses", _("Unresolved"), _("Unresolved Apps"), TABLE_ACTION_DELETE)
+        return new ItemListingFilter("unresolvedprocesses", _("Unresolved"), _("Unresolved processes"), TABLE_ACTION_DELETE)
                 .addFilter(ATTRIBUTE_ACTIVATION_STATE, VALUE_ACTIVATION_STATE_DISABLED)
                 .addFilter(ProcessItem.ATTRIBUTE_CONFIGURATION_STATE, ProcessItem.VALUE_CONFIGURATION_STATE_UNRESOLVED);
     }
@@ -121,8 +114,8 @@ public class ProcessListingAdminPage extends ItemListingPage<ProcessItem>
     protected ItemListingResourceFilter defineResourceFilters() {
         final ItemListingResourceFilter categories = new ItemListingResourceFilter(
                 new APISearchRequest(Definitions.get(CategoryDefinition.TOKEN)),
-                CategoryItem.ATTRIBUTE_NAME, "default-image" /* fake attribute to display default image*/, TABLE_NO_ACTION)
-                .addFilterMapping(ProcessItem.FILTER_CATEGORY_ID, CategoryItem.ATTRIBUTE_ID);
+                CategoryItem.ATTRIBUTE_NAME, TABLE_NO_ACTION)
+                        .addFilterMapping(ProcessItem.FILTER_CATEGORY_ID, CategoryItem.ATTRIBUTE_ID);
         return categories;
     }
 
@@ -152,7 +145,7 @@ public class ProcessListingAdminPage extends ItemListingPage<ProcessItem>
                 _("Enabled"),
                 createItemTable()
                         .addGroupedAction(
-                                new JsId("disable"), _("Disable"), _("Disable selected apps"), new DisableProcessAction()),
+                                new JsId("disable"), _("Disable"), _("Disable selected processes"), new DisableProcessAction()),
                 getQuickDetailsTargetPage());
     }
 
@@ -167,8 +160,8 @@ public class ProcessListingAdminPage extends ItemListingPage<ProcessItem>
                 _("Disabled"),
                 createItemTable()
                         .addGroupedAction(
-                                new JsId("enable"), _("Enable"), _("Enable selected apps"), new EnableProcessAction())
-                        .addGroupedMultipleDeleteAction(_("Delete selected apps"), ProcessDefinition.get(), _("app"), _("apps")),
+                                new JsId("enable"), _("Enable"), _("Enable selected processes"), new EnableProcessAction())
+                        .addGroupedMultipleDeleteAction(_("Delete selected processes"), ProcessDefinition.get(), _("process"), _("processes")),
                 getQuickDetailsTargetPage());
     }
 
@@ -180,15 +173,9 @@ public class ProcessListingAdminPage extends ItemListingPage<ProcessItem>
         return new ItemListingTable(new JsId(TABLE_ACTION_DELETE),
                 _("Deletable"),
                 createItemTable()
-                        .addGroupedMultipleDeleteAction(_("Delete selected apps"), ProcessDefinition.get(), _("app"), _("apps")),
+                        .addGroupedMultipleDeleteAction(_("Delete selected processes"), ProcessDefinition.get(), _("process"), _("processes")),
                 getQuickDetailsTargetPage());
     }
-
-    /*
-     * protected ItemTable createCategoryProcessTable() {
-     * return createItemTable();
-     * }
-     */
 
     protected ItemTable createItemTable() {
         return new ItemTable(Definitions.get(ProcessDefinition.TOKEN))
@@ -205,7 +192,7 @@ public class ProcessListingAdminPage extends ItemListingPage<ProcessItem>
                 .addColumn(
                         new DateAttributeReader(
                                 ProcessItem.ATTRIBUTE_DEPLOYMENT_DATE,
-                                DateFormat.FORMAT.DISPLAY_SHORT),
+                                DateFormat.FORMAT.FORM),
                         _("Installed on"))
                 .addColumn(ProcessItem.ATTRIBUTE_DISPLAY_DESCRIPTION,
                         _("Description"));

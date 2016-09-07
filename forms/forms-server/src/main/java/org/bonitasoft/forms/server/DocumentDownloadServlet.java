@@ -13,10 +13,6 @@
  **/
 package org.bonitasoft.forms.server;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -28,10 +24,15 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.bonitasoft.console.common.server.preferences.constants.WebBonitaConstants;
-import org.bonitasoft.console.common.server.preferences.constants.WebBonitaConstantsUtils;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.bonitasoft.console.common.server.utils.BPMEngineAPIUtil;
+import org.bonitasoft.console.common.server.utils.BonitaHomeFolderAccessor;
 import org.bonitasoft.console.common.server.utils.FormsResourcesUtils;
+import org.bonitasoft.console.common.server.utils.UnauthorizedFolderException;
 import org.bonitasoft.engine.api.ProcessAPI;
 import org.bonitasoft.engine.bpm.document.ArchivedDocument;
 import org.bonitasoft.engine.bpm.document.Document;
@@ -42,7 +43,7 @@ import org.bonitasoft.forms.server.api.IFormWorkflowAPI;
 
 /**
  * Servlet allowing to download process instances attachments
- * 
+ *
  * @author Anthony Birembaut
  */
 public class DocumentDownloadServlet extends HttpServlet {
@@ -129,29 +130,22 @@ public class DocumentDownloadServlet extends HttpServlet {
             if (LOGGER.isLoggable(Level.FINE)) {
                 LOGGER.log(Level.FINE, "attachmentPath: " + filePath);
             }
-            final File file = new File(filePath);
+            final BonitaHomeFolderAccessor tempFolderAccessor = new BonitaHomeFolderAccessor();
             try {
-                final File tmpDir = WebBonitaConstantsUtils.getInstance(apiSession.getTenantId()).getTempFolder();
-                if (!file.getCanonicalPath().startsWith(tmpDir.getCanonicalPath())) {
-                    throw new IOException();
+                final File file = tempFolderAccessor.getTempFile(filePath, apiSession.getTenantId());
+                if (fileName == null) {
+                    fileName = file.getName();
                 }
+                fileContent = getFileContent(file, filePath);
+            } catch (final UnauthorizedFolderException e) {
+                throw new ServletException(e.getMessage());
             } catch (final IOException e) {
-                final String errorMessage = "Error while getting the file " + filePath + " For security reasons, access to paths other than "
-                        + WebBonitaConstants.BONITA_HOME + "/" + WebBonitaConstants.clientFolderPath + "/" + WebBonitaConstants.tmpFolderName
-                        + " is restricted";
-                if (LOGGER.isLoggable(Level.SEVERE)) {
-                    LOGGER.log(Level.SEVERE, errorMessage, e);
-                }
-                throw new ServletException(errorMessage);
+                throw new ServletException(e);
             }
-            if (fileName == null) {
-                fileName = file.getName();
-            }
-            fileContent = getFileContent(file, filePath);
         } else if (fileName != null && contentStorageId != null) {
             try {
                 fileContent = bpmEngineAPIUtil.getProcessAPI(apiSession).getDocumentContent(contentStorageId);
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 final String errorMessage = "Error while retrieving the document  with content storage ID " + contentStorageId + " from the engine.";
                 if (LOGGER.isLoggable(Level.SEVERE)) {
                     LOGGER.log(Level.SEVERE, errorMessage, e);
@@ -166,7 +160,7 @@ public class DocumentDownloadServlet extends HttpServlet {
                     fileName = document.getContentFileName();
                     contentStorageId = document.getContentStorageId();
                 } catch (final DocumentNotFoundException dnfe) {
-                    final ArchivedDocument archivedDocument = processAPI.getArchivedProcessDocument(Long.valueOf(documentId));
+                    final ArchivedDocument archivedDocument = processAPI.getArchivedVersionOfProcessDocument(Long.valueOf(documentId));
                     fileName = archivedDocument.getDocumentContentFileName();
                     contentStorageId = archivedDocument.getContentStorageId();
                 }

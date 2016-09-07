@@ -5,12 +5,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.bonitasoft.forms.client.model.ReducedFormFieldAvailableValue;
+import org.bonitasoft.forms.client.view.common.DOMUtils;
 
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -39,7 +40,7 @@ import com.google.gwt.user.client.ui.Widget;
 
 /**
  * Widget displaying a group of radio buttons (only one radio button can be selected inside a group)
- * 
+ *
  * @author Anthony Birembaut
  */
 public class RadioButtonGroupWidget extends Composite implements HasClickHandlers, ClickHandler, HasValueChangeHandlers<Boolean>, ValueChangeHandler<Boolean> {
@@ -98,7 +99,7 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
 
     /**
      * Constructor
-     * 
+     *
      * @param radioButtonGroupId
      *            Id of the radio button group
      * @param availableValues
@@ -109,7 +110,7 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
      *            the css classes of each radio button
      * @param allowHTML
      *            allow HTML in the radio buttons labels
-     * 
+     *
      */
     public RadioButtonGroupWidget(final String radioButtonGroupId, final List<ReducedFormFieldAvailableValue> availableValues, final String initialValue,
             final String itemsStyle, final boolean allowHTML) {
@@ -118,7 +119,7 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
 
     /**
      * Constructor
-     * 
+     *
      * @param radioButtonGroupId
      *            Id of the radio button group
      * @param availableValues
@@ -131,7 +132,7 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
      *            allow HTML in the radio buttons labels
      * @param isElementOfMultipleWidget
      *            indicates if the widget instance is a child of a multiple element
-     * 
+     *
      */
     public RadioButtonGroupWidget(final String radioButtonGroupId, final List<ReducedFormFieldAvailableValue> availableValues, final String initialValue,
             final String itemsStyle, final boolean allowHTML, final boolean isElementOfMultipleWidget) {
@@ -148,6 +149,7 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
             final RadioButton radioButton = createRadioButton(radioButtonGroupName, availableValue, allowHTML);
             addItemsStyle(radioButton, itemsStyle);
             setInitialValue(radioButton, initialValue, availableValue);
+            saveRadioButton(radioButton);
             groupWidgets.add(radioButton);
         }
 
@@ -173,15 +175,14 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
     }
 
     private void setInitialValue(final RadioButton radioButton, final String initialValue, final ReducedFormFieldAvailableValue availableValue) {
-        if (initialValue != null && initialValue.equals(availableValue.getValue()))
-        {
+        if (initialValue != null && initialValue.equals(availableValue.getValue())) {
             radioButton.setValue(true);
         }
     }
 
     /**
      * Useful in case the groups of radio buttons is displayed in several widget group instances
-     * 
+     *
      * @param radioButtonGroupId
      *            the radio button definition Id
      * @return a name that can be used for the radio button group instance
@@ -223,28 +224,26 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
 
     /**
      * Set the value of the widget
-     * 
+     *
      * @param value
+     * @param fireEvents
      */
-    public void setValue(final String value, boolean fireEvents) {
-        if (getValue() != null && getValue().equals(value) || value != null && value.equals(getValue())) {
-            fireEvents = false;
-        }
-        for (final RadioButton radioButton : radioButtons) {
-            if (value != null && value.equals(radioButton.getFormValue())) {
-                radioButton.setValue(true);
-            } else {
-                radioButton.setValue(false);
-            }
-            if (fireEvents) {
-                ValueChangeEvent.fire(radioButton, true);
+    public void setValue(final String value, final boolean fireEvents) {
+        final String currentValue = getValue();
+        if (!(currentValue == null && value == null || currentValue != null && currentValue.equals(value))) {
+            //don't do anything if the value of the widget doesn't change
+            for (final RadioButton radioButton : radioButtons) {
+                final DOMUtils domUtils = DOMUtils.getInstance();
+                final boolean newIsCheckedValue = value != null && value.equals(radioButton.getFormValue());
+                radioButton.setValue(newIsCheckedValue, fireEvents);
+                domUtils.overrideNativeInputAfterUpdate(radioButton, newIsCheckedValue);
             }
         }
     }
 
     /**
      * Set the wigdet available values
-     * 
+     *
      * @param availableValues
      */
     public void setAvailableValues(final List<ReducedFormFieldAvailableValue> availableValues, final boolean fireEvents) {
@@ -271,7 +270,7 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
 
     /**
      * Enable or disable the radiobuttons group
-     * 
+     *
      * @param isEnabled
      */
     public void setEnabled(final boolean isEnabled) {
@@ -342,9 +341,9 @@ public class RadioButtonGroupWidget extends Composite implements HasClickHandler
         @Override
         public void removeHandler() {
             if (eventHandler instanceof ClickHandler) {
-                RadioButtonGroupWidget.this.clickHandlers.remove(eventHandler);
+                clickHandlers.remove(eventHandler);
             } else if (eventHandler instanceof ValueChangeHandler<?>) {
-                RadioButtonGroupWidget.this.valueChangeHandlers.remove(eventHandler);
+                valueChangeHandlers.remove(eventHandler);
             }
         }
     }

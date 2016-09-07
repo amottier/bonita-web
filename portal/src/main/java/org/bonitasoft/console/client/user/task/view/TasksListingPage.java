@@ -5,12 +5,10 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -22,16 +20,14 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.bonitasoft.console.client.admin.bpm.cases.view.CaseListingAdminPage;
 import org.bonitasoft.console.client.admin.bpm.task.view.TaskListingAdminPage;
 import org.bonitasoft.console.client.admin.process.view.ProcessListingAdminPage;
+import org.bonitasoft.console.client.angular.AngularIFrameView;
 import org.bonitasoft.console.client.common.formatter.OverdueDateCellFormatter;
-import org.bonitasoft.console.client.user.application.view.ProcessListingPage;
 import org.bonitasoft.console.client.user.cases.view.CaseListingPage;
+import org.bonitasoft.console.client.user.process.view.ProcessListingPage;
 import org.bonitasoft.console.client.user.task.action.TaskClaimAction;
 import org.bonitasoft.console.client.user.task.action.TaskRelaseAction;
-import org.bonitasoft.console.client.user.task.action.UserTasksHideAction;
-import org.bonitasoft.console.client.user.task.action.UserTasksUnhideAction;
 import org.bonitasoft.web.rest.model.bpm.flownode.ArchivedHumanTaskDefinition;
 import org.bonitasoft.web.rest.model.bpm.flownode.ArchivedHumanTaskItem;
 import org.bonitasoft.web.rest.model.bpm.flownode.HumanTaskDefinition;
@@ -49,6 +45,7 @@ import org.bonitasoft.web.toolkit.client.ui.action.Action;
 import org.bonitasoft.web.toolkit.client.ui.component.Link;
 import org.bonitasoft.web.toolkit.client.ui.component.Title;
 import org.bonitasoft.web.toolkit.client.ui.component.table.ItemTable;
+import org.bonitasoft.web.toolkit.client.ui.page.itemListingPage.AppResourceFilter;
 import org.bonitasoft.web.toolkit.client.ui.page.itemListingPage.ItemListingFilter;
 import org.bonitasoft.web.toolkit.client.ui.page.itemListingPage.ItemListingPage;
 import org.bonitasoft.web.toolkit.client.ui.page.itemListingPage.ItemListingResourceFilter;
@@ -57,7 +54,6 @@ import org.bonitasoft.web.toolkit.client.ui.page.itemListingPage.ItemListingTabl
 
 /**
  * @author Séverin Moussel
- * 
  */
 public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements PluginTask {
 
@@ -69,7 +65,8 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
         PRIVILEGES.add(TasksListingPage.TOKEN);
         PRIVILEGES.add(TaskListingAdminPage.TOKEN); // FIX ME: we should create a humantaskmoredetails admin page so ill never need this
         PRIVILEGES.add(CaseListingPage.TOKEN);
-        PRIVILEGES.add(CaseListingAdminPage.TOKEN);
+        PRIVILEGES.add(AngularIFrameView.CASE_LISTING_ADMIN_TOKEN);
+        PRIVILEGES.add(AngularIFrameView.TASK_LISTING_TOKEN);
         PRIVILEGES.add(ProcessListingPage.TOKEN);
         PRIVILEGES.add(ProcessListingAdminPage.TOKEN);
         PRIVILEGES.add("reportlistingadminext");
@@ -109,7 +106,6 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
         tables.add(unassignedTable());
         tables.add(assignedTable());
         tables.add(performedTasksTable());
-        tables.add(hiddenToMeTable());
         return tables;
     }
 
@@ -119,12 +115,11 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
     }
 
     private ItemTable availableItemTable() {
-        ItemTable table = buildItemTableColumns();
+        final ItemTable table = buildItemTableColumns();
         table.addHiddenFilter(HumanTaskItem.ATTRIBUTE_STATE, HumanTaskItem.VALUE_STATE_READY);
         table.addAction(newRefreshButton(table));
         table.addGroupedAction(newAssignToMeButton());
         table.addGroupedAction(newUnasignButton());
-        table.addGroupedAction(newIgnoreButton());
         return table;
     }
 
@@ -133,11 +128,10 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
     }
 
     private ItemTable unasignedItemTable() {
-        ItemTable table = buildItemTableColumns();
+        final ItemTable table = buildItemTableColumns();
         table.addHiddenFilter(HumanTaskItem.ATTRIBUTE_STATE, HumanTaskItem.VALUE_STATE_READY);
         table.addAction(newRefreshButton(table));
         table.addGroupedAction(newAssignToMeButton());
-        table.addGroupedAction(newIgnoreButton());
         return table;
     }
 
@@ -146,22 +140,11 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
     }
 
     private ItemTable assignedItemTable() {
-        ItemTable table = buildItemTableColumns();
+        final ItemTable table = buildItemTableColumns();
         table.addHiddenFilter(HumanTaskItem.ATTRIBUTE_STATE, HumanTaskItem.VALUE_STATE_READY);
         table.addAction(newRefreshButton(table));
         table.addGroupedAction(newUnasignButton());
-        table.addGroupedAction(newIgnoreButton());
         return table;
-    }
-
-    private ItemListingTable hiddenToMeTable() {
-        return new ItemListingTable(new JsId(TABLE_IGNORED), _("Hidden to me"), hiddenToMeItemTable(), new HumanTaskQuickDetailsPage());
-    }
-
-    private ItemTable hiddenToMeItemTable() {
-        return buildItemTableColumns()
-                .addHiddenFilter(HumanTaskItem.FILTER_HIDDEN_TO_USER_ID, Session.getUserId())
-                .addGroupedAction(newRetrieveButton());
     }
 
     private ItemTable buildItemTableColumns() {
@@ -171,7 +154,7 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
                 .addColumn(HumanTaskItem.ATTRIBUTE_DUE_DATE, _("Due date"), true, true)
                 .addColumn(
                         new FlowNodeContextAttributeReader(HumanTaskItem.ATTRIBUTE_CASE_ID, HumanTaskItem.ATTRIBUTE_ROOT_CONTAINER_ID,
-                                ProcessItem.ATTRIBUTE_DISPLAY_NAME), _("App"))
+                                ProcessItem.ATTRIBUTE_DISPLAY_NAME), _("Process"))
                 .addCellFormatter(HumanTaskItem.ATTRIBUTE_DUE_DATE, new OverdueDateCellFormatter())
                 .setOrder(HumanTaskItem.ATTRIBUTE_DUE_DATE, false)
                 .setOrder(HumanTaskItem.ATTRIBUTE_PRIORITY, false);
@@ -184,11 +167,12 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
     private ItemTable performedTasksItemTable() {
         return new ItemTable(Definitions.get(ArchivedHumanTaskDefinition.TOKEN))
                 .addHiddenFilter(HumanTaskItem.ATTRIBUTE_ASSIGNED_USER_ID, Session.getUserId())
+                .addHiddenFilter(HumanTaskItem.ATTRIBUTE_STATE, HumanTaskItem.VALUE_STATE_COMPLETED)
                 .addColumn(ArchivedHumanTaskItem.ATTRIBUTE_DISPLAY_NAME, _("Name"), true)
                 .addColumn(new DateAttributeReader(ArchivedHumanTaskItem.ATTRIBUTE_REACHED_STATE_DATE), _("Performed date"), true)
                 .addColumn(
                         new FlowNodeContextAttributeReader(HumanTaskItem.ATTRIBUTE_CASE_ID, ArchivedHumanTaskItem.ATTRIBUTE_ROOT_CONTAINER_ID,
-                                ProcessItem.ATTRIBUTE_DISPLAY_NAME), _("App"))
+                                ProcessItem.ATTRIBUTE_DISPLAY_NAME), _("Process"))
                 .setOrder(ArchivedHumanTaskItem.ATTRIBUTE_REACHED_STATE_DATE, false);
     }
 
@@ -215,18 +199,10 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
         return taskButtonFactory.createUnassignedButton(new TaskRelaseAction());
     }
 
-    private Link newIgnoreButton() {
-        return taskButtonFactory.createIgnoreButton(new UserTasksHideAction(Session.getUserId()));
-    }
-
-    private Link newRetrieveButton() {
-        return taskButtonFactory.createRetrieveButton(new UserTasksUnhideAction(Session.getUserId()));
-    }
-
     @Override
     protected Title defineResourceFiltersTitle() {
-        final Title title = new Title(_("Apps"));
-        title.setTooltip(_("Select an App in the list below to display the available tasks"));
+        final Title title = new Title(_("Processes"));
+        title.setTooltip(_("Select a process in the list below to display the available tasks"));
         return title;
     }
 
@@ -269,7 +245,6 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
     @Override
     protected LinkedList<ItemListingFilter> defineSecondaryFilters() {
         final LinkedList<ItemListingFilter> filters = new LinkedList<ItemListingFilter>();
-        filters.add(hiddenFilter());
         filters.add(doneFilter());
         return filters;
     }
@@ -278,16 +253,11 @@ public class TasksListingPage extends ItemListingPage<HumanTaskItem> implements 
         return new ItemListingFilter(FILTER_PERFORMED, _("Done"), _("Display tasks I have done"), TABLE_PERFORMED);
     }
 
-    private ItemListingFilter hiddenFilter() {
-        return new ItemListingFilter(FILTER_IGNORED, _("Hidden"), _("Display tasks I'm ignoring"), TABLE_IGNORED);
-    }
-
     @Override
     protected ItemListingResourceFilter defineResourceFilters() {
-        return new ItemListingResourceFilter(
-                new APISearchRequest(Definitions.get(ProcessDefinition.TOKEN)).addFilter(ProcessItem.FILTER_USER_ID, Session.getUserId().toString()),
-                ProcessItem.ATTRIBUTE_DISPLAY_NAME,
-                ProcessItem.ATTRIBUTE_ICON,
+        return new AppResourceFilter(
+                new APISearchRequest(Definitions.get(ProcessDefinition.TOKEN)).addFilter(ProcessItem.FILTER_USER_ID, Session.getUserId().toString())
+                .addFilter(ProcessItem.FILTER_FOR_PENDING_OR_ASSIGNED_TASKS, "true"),
                 TABLE_AVAILABLE)
                 .addFilterMapping(HumanTaskItem.ATTRIBUTE_PROCESS_ID, ProcessItem.ATTRIBUTE_ID)
                 .addFilter(HumanTaskItem.FILTER_USER_ID, Session.getUserId());

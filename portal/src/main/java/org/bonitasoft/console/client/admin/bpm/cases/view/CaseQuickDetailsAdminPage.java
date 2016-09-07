@@ -5,23 +5,25 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package org.bonitasoft.console.client.admin.bpm.cases.view;
 
-import static org.bonitasoft.web.toolkit.client.common.i18n.AbstractI18n._;
+import static org.bonitasoft.web.toolkit.client.common.i18n.AbstractI18n.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bonitasoft.console.client.angular.AngularIFrameView;
 import org.bonitasoft.console.client.common.component.button.MoreButton;
+import org.bonitasoft.console.client.user.cases.view.component.CaseOverviewButton;
 import org.bonitasoft.web.rest.model.bpm.cases.CaseItem;
 import org.bonitasoft.web.rest.model.bpm.flownode.HumanTaskDefinition;
 import org.bonitasoft.web.toolkit.client.data.item.Definitions;
@@ -33,7 +35,7 @@ import org.bonitasoft.web.toolkit.client.ui.page.ItemQuickDetailsPage.ItemQuickD
 
 /**
  * @author Nicolas Tith
- * 
+ *
  */
 public class CaseQuickDetailsAdminPage extends AbstractCaseQuickDetailsAdminPage<CaseItem> {
 
@@ -42,7 +44,7 @@ public class CaseQuickDetailsAdminPage extends AbstractCaseQuickDetailsAdminPage
     public static final List<String> PRIVILEGES = new ArrayList<String>();
 
     static {
-        PRIVILEGES.add(CaseListingAdminPage.TOKEN);
+        PRIVILEGES.add(AngularIFrameView.CASE_LISTING_ADMIN_TOKEN);
     }
 
     public CaseQuickDetailsAdminPage() {
@@ -51,6 +53,7 @@ public class CaseQuickDetailsAdminPage extends AbstractCaseQuickDetailsAdminPage
 
     @Override
     protected void buildToolbar(final CaseItem item) {
+        addToolbarLink(new CaseOverviewButton(item));
         addToolbarLink(new MoreButton(_("Getting more information about the specified case"),
                 createMoreDetailsAction(item)));
     }
@@ -59,9 +62,9 @@ public class CaseQuickDetailsAdminPage extends AbstractCaseQuickDetailsAdminPage
         return new CheckValidSessionBeforeAction(new ActionShowView(getCaseMoreDetailsPage(item)));
     }
 
-	protected ItemQuickDetailsPage<CaseItem> getCaseMoreDetailsPage(final CaseItem item) {
-		return new CaseMoreDetailsAdminPage(item.getId());
-	}
+    protected ItemQuickDetailsPage<CaseItem> getCaseMoreDetailsPage(final CaseItem item) {
+        return new CaseMoreDetailsAdminPage(item.getId());
+    }
 
     @Override
     public String defineToken() {

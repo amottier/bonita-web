@@ -16,6 +16,7 @@ import org.bonitasoft.web.toolkit.client.common.util.StringUtil;
 import org.bonitasoft.web.toolkit.client.data.api.APICaller;
 import org.bonitasoft.web.toolkit.client.data.api.callback.APICallback;
 import org.bonitasoft.web.toolkit.client.data.api.request.ApiSearchResultPager;
+import org.bonitasoft.web.toolkit.client.ui.CssId;
 import org.bonitasoft.web.toolkit.client.ui.JsId;
 import org.bonitasoft.web.toolkit.client.ui.action.RedirectionAction;
 import org.bonitasoft.web.toolkit.client.ui.component.Definition;
@@ -59,8 +60,8 @@ public class ProfileQuickDetailsPage extends AbstractProfileDetailsPage {
     protected LinkedList<ItemDetailsAction> defineActions(final ProfileItem item) {
         final LinkedList<ItemDetailsAction> actions = super.defineActions(item);
         // MORE
-        actions.add(new ItemDetailsAction(new JsId("more"), _("More"), _("Show more details about this profile"),
-                new RedirectionAction(ProfileMoreDetailsPage.TOKEN, new Arg("id", item.getId()))));
+        actions.add(new ItemDetailsAction(new JsId("btn-more"), _("More"), _("Show more details about this profile"), new RedirectionAction(
+                ProfileMoreDetailsPage.TOKEN, new Arg("id", item.getId()))));
 
         return actions;
     }
@@ -71,37 +72,36 @@ public class ProfileQuickDetailsPage extends AbstractProfileDetailsPage {
     }
 
     @Override
-    protected void buildBody(ProfileItem item) {
+    protected void buildBody(final ProfileItem item) {
         addBody(technicalSection(item));
     }
 
-    protected Section technicalSection(ProfileItem item) {
-        return new Section(_("Technical details"))
-                .addBody(nbUsersDefinition(item))
-                .addBody(nbGroupDefinition(item))
-                .addBody(nbRolesDefinition(item))
+    protected Section technicalSection(final ProfileItem item) {
+        Section technicalSection = new Section(_("Technical details"));
+        technicalSection.setId(CssId.QD_SECTION_TECHNICAL_DETAILS);
+        return technicalSection.addBody(nbUsersDefinition(item)).addBody(nbGroupDefinition(item)).addBody(nbRolesDefinition(item))
                 .addBody(nbMembershipsDefinition(item));
     }
 
-    private Definition nbMembershipsDefinition(ProfileItem item) {
+    private Definition nbMembershipsDefinition(final ProfileItem item) {
         final Text nbMemberships = new Text("?");
         nbMemberships.addFiller(new MembershipsFiller(item));
         return new Definition(_("Memberships: %nb_memberships%", new Arg("nb_memberships", "")), "%%", nbMemberships);
     }
 
-    private Definition nbRolesDefinition(ProfileItem item) {
+    private Definition nbRolesDefinition(final ProfileItem item) {
         final Text nbRoles = new Text("?");
         nbRoles.addFiller(new RolesFiller(item));
         return new Definition(_("Roles: %nb_roles%", new Arg("nb_roles", "")), "%%", nbRoles);
     }
 
-    private Definition nbGroupDefinition(ProfileItem item) {
+    private Definition nbGroupDefinition(final ProfileItem item) {
         final Text nbGroups = new Text("?");
         nbGroups.addFiller(new GroupsFiller(item));
         return new Definition(_("Groups: %nb_groups%", new Arg("nb_groups", "")), "%%", nbGroups);
     }
 
-    private Definition nbUsersDefinition(ProfileItem item) {
+    private Definition nbUsersDefinition(final ProfileItem item) {
         final Text nbUsers = new Text("?");
         nbUsers.addFiller(new UsersFiller(item));
         return new Definition(_("Users: %nb_users%", new Arg("nb_users", "")), "%%", nbUsers);
@@ -121,16 +121,15 @@ public class ProfileQuickDetailsPage extends AbstractProfileDetailsPage {
 
         @Override
         protected void getData(final APICallback callback) {
-            new APICaller(ProfileMemberDefinition.get()).search(0, 1, null, null,
-                    MapUtil.asMap(new Arg(ProfileMemberItem.ATTRIBUTE_PROFILE_ID, profile.getId()),
-                            new Arg(ProfileMemberItem.FILTER_MEMBER_TYPE, ProfileMemberItem.VALUE_MEMBER_TYPE_USER)),
-                    callback);
+            new APICaller(ProfileMemberDefinition.get()).search(0, 1, null, null, MapUtil.asMap(
+                    new Arg(ProfileMemberItem.ATTRIBUTE_PROFILE_ID, profile.getId()), new Arg(ProfileMemberItem.FILTER_MEMBER_TYPE,
+                            ProfileMemberItem.VALUE_MEMBER_TYPE_USER)), callback);
         }
 
         @Override
         protected void setData(final String json, final Map<String, String> headers) {
             final ApiSearchResultPager resultPager = ApiSearchResultPager.parse(headers);
-            this.target.getElement().setInnerText(String.valueOf(resultPager.getNbTotalResults()));
+            target.getElement().setInnerText(String.valueOf(resultPager.getNbTotalResults()));
         }
     }
 
@@ -148,16 +147,15 @@ public class ProfileQuickDetailsPage extends AbstractProfileDetailsPage {
 
         @Override
         protected void getData(final APICallback callback) {
-            new APICaller(ProfileMemberDefinition.get()).search(0, 2, null, null,
-                    MapUtil.asMap(new Arg(ProfileMemberItem.ATTRIBUTE_PROFILE_ID, profile.getId()),
-                            new Arg(ProfileMemberItem.FILTER_MEMBER_TYPE, ProfileMemberItem.VALUE_MEMBER_TYPE_GROUP)),
-                    callback);
+            new APICaller(ProfileMemberDefinition.get()).search(0, 2, null, null, MapUtil.asMap(
+                    new Arg(ProfileMemberItem.ATTRIBUTE_PROFILE_ID, profile.getId()), new Arg(ProfileMemberItem.FILTER_MEMBER_TYPE,
+                            ProfileMemberItem.VALUE_MEMBER_TYPE_GROUP)), callback);
         }
 
         @Override
         protected void setData(final String json, final Map<String, String> headers) {
             final ApiSearchResultPager resultPager = ApiSearchResultPager.parse(headers);
-            this.target.getElement().setInnerText(String.valueOf(resultPager.getNbTotalResults()));
+            target.getElement().setInnerText(String.valueOf(resultPager.getNbTotalResults()));
         }
     }
 
@@ -175,16 +173,15 @@ public class ProfileQuickDetailsPage extends AbstractProfileDetailsPage {
 
         @Override
         protected void getData(final APICallback callback) {
-            new APICaller(ProfileMemberDefinition.get()).search(0, 2, null, null,
-                    MapUtil.asMap(new Arg(ProfileMemberItem.ATTRIBUTE_PROFILE_ID, profile.getId()),
-                            new Arg(ProfileMemberItem.FILTER_MEMBER_TYPE, ProfileMemberItem.VALUE_MEMBER_TYPE_ROLE)),
-                    callback);
+            new APICaller(ProfileMemberDefinition.get()).search(0, 2, null, null, MapUtil.asMap(
+                    new Arg(ProfileMemberItem.ATTRIBUTE_PROFILE_ID, profile.getId()), new Arg(ProfileMemberItem.FILTER_MEMBER_TYPE,
+                            ProfileMemberItem.VALUE_MEMBER_TYPE_ROLE)), callback);
         }
 
         @Override
         protected void setData(final String json, final Map<String, String> headers) {
             final ApiSearchResultPager resultPager = ApiSearchResultPager.parse(headers);
-            this.target.getElement().setInnerText(String.valueOf(resultPager.getNbTotalResults()));
+            target.getElement().setInnerText(String.valueOf(resultPager.getNbTotalResults()));
         }
     }
 
@@ -202,16 +199,15 @@ public class ProfileQuickDetailsPage extends AbstractProfileDetailsPage {
 
         @Override
         protected void getData(final APICallback callback) {
-            new APICaller(ProfileMemberDefinition.get()).search(0, 2, null, null,
-                    MapUtil.asMap(new Arg(ProfileMemberItem.ATTRIBUTE_PROFILE_ID, profile.getId()),
-                            new Arg(ProfileMemberItem.FILTER_MEMBER_TYPE, ProfileMemberItem.VALUE_MEMBER_TYPE_MEMBERSHIP)),
-                    callback);
+            new APICaller(ProfileMemberDefinition.get()).search(0, 2, null, null, MapUtil.asMap(
+                    new Arg(ProfileMemberItem.ATTRIBUTE_PROFILE_ID, profile.getId()), new Arg(ProfileMemberItem.FILTER_MEMBER_TYPE,
+                            ProfileMemberItem.VALUE_MEMBER_TYPE_MEMBERSHIP)), callback);
         }
 
         @Override
         protected void setData(final String json, final Map<String, String> headers) {
             final ApiSearchResultPager resultPager = ApiSearchResultPager.parse(headers);
-            this.target.getElement().setInnerText(String.valueOf(resultPager.getNbTotalResults()));
+            target.getElement().setInnerText(String.valueOf(resultPager.getNbTotalResults()));
         }
     }
 }

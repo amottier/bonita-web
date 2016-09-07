@@ -5,12 +5,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -18,30 +18,22 @@ package org.bonitasoft.console.client.user.task.view.more;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-import org.bonitasoft.console.client.admin.bpm.cases.view.CaseListingAdminPage;
 import org.bonitasoft.console.client.admin.bpm.task.view.TaskListingAdminPage;
 import org.bonitasoft.console.client.admin.process.view.ProcessListingAdminPage;
-import org.bonitasoft.console.client.common.view.PerformTaskPage;
-import org.bonitasoft.console.client.user.application.view.ProcessListingPage;
+import org.bonitasoft.console.client.angular.AngularIFrameView;
 import org.bonitasoft.console.client.user.cases.view.CaseListingPage;
+import org.bonitasoft.console.client.user.process.view.ProcessListingPage;
 import org.bonitasoft.console.client.user.task.action.TaskClaimAction;
 import org.bonitasoft.console.client.user.task.action.TaskRelaseAction;
-import org.bonitasoft.console.client.user.task.action.UserTasksHideAction;
-import org.bonitasoft.console.client.user.task.action.UserTasksUnhideAction;
+import org.bonitasoft.console.client.user.task.view.AssignAndPerformHumanTaskFormAction;
 import org.bonitasoft.console.client.user.task.view.PluginTask;
 import org.bonitasoft.console.client.user.task.view.TaskButtonFactory;
 import org.bonitasoft.console.client.user.task.view.TasksListingPage;
-import org.bonitasoft.web.rest.model.bpm.flownode.HiddenUserTaskDefinition;
 import org.bonitasoft.web.rest.model.bpm.flownode.HumanTaskDefinition;
 import org.bonitasoft.web.rest.model.bpm.flownode.HumanTaskItem;
 import org.bonitasoft.web.toolkit.client.Session;
-import org.bonitasoft.web.toolkit.client.data.APIID;
-import org.bonitasoft.web.toolkit.client.data.api.callback.APICallback;
-import org.bonitasoft.web.toolkit.client.data.api.request.APIRequest;
-import org.bonitasoft.web.toolkit.client.data.item.Definitions;
-import org.bonitasoft.web.toolkit.client.ui.action.ActionShowView;
+import org.bonitasoft.web.toolkit.client.ui.action.Action;
 
 /**
  * @author Séverin Moussel
@@ -50,15 +42,15 @@ import org.bonitasoft.web.toolkit.client.ui.action.ActionShowView;
  */
 public class HumanTaskMoreDetailsPage extends AbstractMoreTaskDetailPage<HumanTaskItem> implements PluginTask {
 
-    public static String TOKEN = "taskdetails";    
-    
+    public static final String TOKEN = "taskdetails";
+
     public static final List<String> PRIVILEGES = new ArrayList<String>();
-    
+
     static {
         PRIVILEGES.add(TasksListingPage.TOKEN);
         PRIVILEGES.add(TaskListingAdminPage.TOKEN);
         PRIVILEGES.add(CaseListingPage.TOKEN);
-        PRIVILEGES.add(CaseListingAdminPage.TOKEN);
+        PRIVILEGES.add(AngularIFrameView.CASE_LISTING_ADMIN_TOKEN);
         PRIVILEGES.add(ProcessListingPage.TOKEN);
         PRIVILEGES.add(ProcessListingAdminPage.TOKEN);
         PRIVILEGES.add("reportlistingadminext");
@@ -68,12 +60,12 @@ public class HumanTaskMoreDetailsPage extends AbstractMoreTaskDetailPage<HumanTa
         super(HumanTaskDefinition.get());
     }
 
-    public HumanTaskMoreDetailsPage(HumanTaskItem task) {
+    public HumanTaskMoreDetailsPage(final HumanTaskItem task) {
         super(HumanTaskDefinition.get(), task);
     }
 
     @Override
-    protected void buildToolbar(HumanTaskItem item) {
+    protected void buildToolbar(final HumanTaskItem item) {
         super.buildToolbar(item);
         final TaskButtonFactory factory = new TaskButtonFactory();
         if (!isTaskAssignedToOtherUser(item) && item.isUserTask()) {
@@ -87,42 +79,10 @@ public class HumanTaskMoreDetailsPage extends AbstractMoreTaskDetailPage<HumanTa
         if (item.isUnassigned()) {
             addToolbarLink(factory.createClaimButton(new TaskClaimAction(Session.getUserId(), item.getId())));
         }
-
-        if (!isTaskAssignedToOtherUser(item)) {
-
-            isTaskHidden(item, new APICallback() {
-
-                @Override
-                public void onSuccess(final int httpStatusCode, final String response,
-                        final Map<String, String> headers) {
-                    addRetrieveButton(factory);
-                }
-
-                @Override
-                protected void on404NotFound(String message) {
-                    addIgnoreButton(factory);
-                }
-
-            });
-
-        }
     }
 
-    private ActionShowView createPerformAction(final HumanTaskItem item) {
-        return new ActionShowView(new PerformTaskPage(item.getId()));
-    }
-
-    private void addRetrieveButton(final TaskButtonFactory factory) {
-        addToolbarLink(factory.createRetrieveButton(new UserTasksUnhideAction(Session.getUserId(), getItemId())));
-    }
-
-    private void addIgnoreButton(final TaskButtonFactory factory) {
-        addToolbarLink(factory.createIgnoreButton(new UserTasksHideAction(Session.getUserId(), getItemId())));
-    }
-
-    private void isTaskHidden(HumanTaskItem item, APICallback callback) {
-        final APIID compAPIId = APIID.makeAPIID(Session.getUserId().toLong(), item.getId().toLong());
-        APIRequest.get(compAPIId, Definitions.get(HiddenUserTaskDefinition.TOKEN), callback).run();
+    private Action createPerformAction(final HumanTaskItem item) {
+        return new AssignAndPerformHumanTaskFormAction(item);
     }
 
     @Override

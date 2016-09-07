@@ -5,12 +5,10 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -44,9 +42,8 @@ import org.bonitasoft.web.toolkit.client.common.texttemplate.Arg;
 
 /**
  * Process engine API client
- * 
  * Wrapper to processAPI for all process methods
- * 
+ *
  * @author Colin PUY
  */
 public class ProcessEngineClient {
@@ -81,7 +78,7 @@ public class ProcessEngineClient {
             return getProcessApi().deploy(businessArchive);
         } catch (final AlreadyExistsException e) {
             final DesignProcessDefinition processDefinition = businessArchive.getProcessDefinition();
-            throw new APIException(new _("Apps %appName% in version %version% already exists", new Arg("appName", processDefinition.getName()), new Arg(
+            throw new APIException(new _("Process %appName% in version %version% already exists", new Arg("appName", processDefinition.getName()), new Arg(
                     "version", processDefinition.getVersion())), e);
         } catch (final Exception e) {
             throw new APIException(new _("Unable to deploy business archive"), e);
@@ -127,7 +124,7 @@ public class ProcessEngineClient {
 
     /**
      * Delete archived process instances by bunch for a given processId
-     * 
+     *
      * @throws ProcessDefinitionNotFoundException
      * @throws DeletionException
      */
@@ -151,7 +148,7 @@ public class ProcessEngineClient {
 
     /**
      * Delete process instances by bunch for a given processId
-     * 
+     *
      * @throws ProcessDefinitionNotFoundException
      * @throws DeletionException
      */
@@ -199,7 +196,7 @@ public class ProcessEngineClient {
 
     public SearchResult<ProcessDeploymentInfo> searchUncategorizedProcessDefinitionsUserCanStart(final long userId, final SearchOptions searchOptions) {
         try {
-            return getProcessApi().searchUncategorizedProcessDeploymentInfosUserCanStart(userId, searchOptions);
+            return getProcessApi().searchUncategorizedProcessDeploymentInfosCanBeStartedBy(userId, searchOptions);
         } catch (final Exception e) {
             throw new APIException("Error when searching uncategorized process definition which can be started by user " + userId, e);
         }
@@ -223,9 +220,35 @@ public class ProcessEngineClient {
         }
     }
 
+    public SearchResult<ProcessDeploymentInfo> searchProcessDeploymentInfosWithAssignedOrPendingHumanTasksSupervisedBy(final long supervisorId,
+            final SearchOptions searchOptions) {
+        try {
+            return getProcessApi().searchProcessDeploymentInfosWithAssignedOrPendingHumanTasksSupervisedBy(supervisorId, searchOptions);
+        } catch (final SearchException e) {
+            throw new APIException("Error when searching process user can start", e);
+        }
+    }
+
+    public SearchResult<ProcessDeploymentInfo> searchProcessDeploymentInfosWithAssignedOrPendingHumanTasks(final SearchOptions searchOptions) {
+        try {
+            return getProcessApi().searchProcessDeploymentInfosWithAssignedOrPendingHumanTasks(searchOptions);
+        } catch (final SearchException e) {
+            throw new APIException("Error when searching process user can start", e);
+        }
+    }
+
+    public SearchResult<ProcessDeploymentInfo> searchProcessDeploymentInfosWithAssignedOrPendingHumanTasksFor(final long userId,
+            final SearchOptions searchOptions) {
+        try {
+            return getProcessApi().searchProcessDeploymentInfosWithAssignedOrPendingHumanTasksFor(userId, searchOptions);
+        } catch (final SearchException e) {
+            throw new APIException("Error when searching process user can start", e);
+        }
+    }
+
     public SearchResult<ProcessDeploymentInfo> searchProcessDeploymentInfos(final long userId, final SearchOptions searchOptions) {
         try {
-            return getProcessApi().searchProcessDeploymentInfos(userId, searchOptions);
+            return getProcessApi().searchProcessDeploymentInfosCanBeStartedBy(userId, searchOptions);
         } catch (final SearchException e) {
             throw new APIException("Error when searching process user can start", e);
         }
@@ -238,4 +261,5 @@ public class ProcessEngineClient {
             throw new APIException(new _("Unable to get process data definitions, process %processId% not found", new Arg("processId", processId)));
         }
     }
+
 }

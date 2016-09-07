@@ -17,6 +17,7 @@
 package org.bonitasoft.forms.server.accessor;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,17 +28,17 @@ import java.util.logging.Logger;
  *
  */
 public class DefaultValidatorsProperties {
-    
+
     /**
      * Default name of the form definition file
      */
     private static final String FORM_VALIDATORS_CONFIG_FILE_NAME = "forms-validators.properties";
-    
+
     /**
      * Logger
      */
     private static Logger LOGGER = Logger.getLogger(DefaultValidatorsProperties.class.getName());
-    
+
     /**
      * Instance attribute
      */
@@ -47,7 +48,7 @@ public class DefaultValidatorsProperties {
      * properties
      */
     private Properties defaultProperties;
-    
+
     /**
      * @return the {@link DefaultValidatorsProperties} instance
      */
@@ -64,22 +65,22 @@ public class DefaultValidatorsProperties {
     private DefaultValidatorsProperties(){
         loadProperties();
     }
-    
+
     /**
      * Load the properties
      */
     void loadProperties() {
         defaultProperties = new Properties();
         // Read properties file.
-        try {
-            defaultProperties.load(Thread.currentThread().getContextClassLoader().getResourceAsStream(FORM_VALIDATORS_CONFIG_FILE_NAME));
+        try(InputStream stream = getClass().getClassLoader().getResourceAsStream(FORM_VALIDATORS_CONFIG_FILE_NAME)) {
+            defaultProperties.load(stream);
         } catch (final IOException e) {
             LOGGER.log(Level.WARNING, "default forms config file " + FORM_VALIDATORS_CONFIG_FILE_NAME + " is missing form the classpath");
         }
     }
 
     /**
-     * @param the classname of the required type
+     * @param className the class name of the required type
      * @return the default validator for the given type
      */
     public String getDefaultValidator(final String className) {

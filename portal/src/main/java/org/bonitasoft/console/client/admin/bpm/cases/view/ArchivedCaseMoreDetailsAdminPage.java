@@ -5,12 +5,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -23,32 +23,29 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.bonitasoft.console.client.admin.process.view.ProcessListingAdminPage;
+import org.bonitasoft.console.client.angular.AngularIFrameView;
 import org.bonitasoft.console.client.common.component.snippet.CommentSectionSnippet;
 import org.bonitasoft.console.client.common.metadata.MetadataCaseBuilder;
-import org.bonitasoft.console.client.user.cases.view.DisplayCaseFormPage;
+import org.bonitasoft.console.client.user.cases.view.component.CaseOverviewButton;
 import org.bonitasoft.web.rest.model.bpm.cases.ArchivedCaseDefinition;
 import org.bonitasoft.web.rest.model.bpm.cases.ArchivedCaseItem;
-import org.bonitasoft.web.rest.model.bpm.cases.CaseItem;
 import org.bonitasoft.web.toolkit.client.ui.CssClass;
-import org.bonitasoft.web.toolkit.client.ui.action.ActionShowView;
-import org.bonitasoft.web.toolkit.client.ui.component.Button;
-import org.bonitasoft.web.toolkit.client.ui.component.Clickable;
 import org.bonitasoft.web.toolkit.client.ui.component.button.ButtonBack;
 import org.bonitasoft.web.toolkit.client.ui.page.ItemQuickDetailsPage.ItemDetailsMetadata;
 import org.bonitasoft.web.toolkit.client.ui.page.ItemQuickDetailsPage.ItemQuickDetailsPage;
 
 /**
  * @author Nicolas TITH
- * 
+ *
  */
 public class ArchivedCaseMoreDetailsAdminPage extends ItemQuickDetailsPage<ArchivedCaseItem> {
 
     public static final String TOKEN = "archivedcasemoredetailsadmin";
-    
+
     public static final List<String> PRIVILEGES = new ArrayList<String>();
-    
+
     static {
-        PRIVILEGES.add(CaseListingAdminPage.TOKEN);
+        PRIVILEGES.add(AngularIFrameView.CASE_LISTING_ADMIN_TOKEN);
         PRIVILEGES.add(ProcessListingAdminPage.TOKEN);
         PRIVILEGES.add("reportlistingadminext");
     }
@@ -65,7 +62,7 @@ public class ArchivedCaseMoreDetailsAdminPage extends ItemQuickDetailsPage<Archi
 
     @Override
     protected void defineTitle(final ArchivedCaseItem item) {
-        setTitle(_("Case id: ") + item.getSourceObjectId() + " - App: " + item.getProcess().getDisplayName());
+        setTitle(_("Case id: ") + item.getSourceObjectId() + " - Process: " + item.getProcess().getDisplayName());
     }
 
     @Override
@@ -96,22 +93,17 @@ public class ArchivedCaseMoreDetailsAdminPage extends ItemQuickDetailsPage<Archi
     @Override
     protected void buildToolbar(final ArchivedCaseItem item) {
         addToolbarLink(new ButtonBack());
-        addToolbarLink(newButtonDisplayCaseForm(item));
-    }
-
-    private Clickable newButtonDisplayCaseForm(final CaseItem item) {
-        return new Button("btn-overview", _("Overview"), _("Display the case form"),
-                new ActionShowView(new DisplayCaseFormPage(item)));
+        addToolbarLink(new CaseOverviewButton(item));
     }
 
     @Override
     protected void buildBody(final ArchivedCaseItem item) {
-        final ArchivedTasksSection taskSection = new ArchivedTasksSection(item);
-        taskSection.setNbLinesByPages(10);
-        addBody(taskSection);
+        final ArchivedTasksSection archivedTaskSection = new ArchivedTasksSection(item);
+        archivedTaskSection.setNbLinesByPages(10);
+        addBody(archivedTaskSection);
 
         addBody(new CommentSectionSnippet(item.getSourceObjectId(), true)
-                .build());
+        .build());
     }
 
     @Override

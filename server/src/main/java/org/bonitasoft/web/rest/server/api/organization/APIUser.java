@@ -5,26 +5,21 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package org.bonitasoft.web.rest.server.api.organization;
 
-import java.io.File;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.bonitasoft.console.common.server.preferences.constants.WebBonitaConstantsUtils;
 import org.bonitasoft.console.common.server.preferences.properties.PropertiesFactory;
 import org.bonitasoft.web.rest.model.identity.UserDefinition;
 import org.bonitasoft.web.rest.model.identity.UserItem;
@@ -49,12 +44,10 @@ import org.bonitasoft.web.toolkit.client.data.item.attribute.validator.AbstractS
 
 /**
  * @author Séverin Moussel
- * 
  */
 // TODO : implements APIhasFile
 public class APIUser extends ConsoleAPI<UserItem> implements APIHasAdd<UserItem>, APIHasDelete, APIHasUpdate<UserItem>,
-    APIHasGet<UserItem>, APIHasSearch<UserItem> {
-
+        APIHasGet<UserItem>, APIHasSearch<UserItem> {
 
     /**
      * Logger
@@ -73,94 +66,72 @@ public class APIUser extends ConsoleAPI<UserItem> implements APIHasAdd<UserItem>
 
     @Override
     public UserItem add(final UserItem item) {
-        
+
         // Finish the upload of the icon
-        if (item.getIcon() != null && !item.getIcon().isEmpty()) {
-            item.setIcon(uploadIcon(item.getIcon()));
-        }
         if (StringUtil.isBlank(item.getPassword())) {
-            throw new ValidationException(Arrays.asList(new ValidationError("Password", "%attribute% is mandatory")));
+            throw new ValidationException(Collections.singletonList(new ValidationError("Password", "%attribute% is mandatory")));
         }
         checkPasswordRobustness(item.getPassword());
-        
+
         // Add
-        return new UserDatastore(getEngineSession()).add(item);
+        return getUserDatastore().add(item);
 
     }
-    
-    private void checkPasswordRobustness(String password) {
+
+    UserDatastore getUserDatastore() {
+        return new UserDatastore(getEngineSession());
+    }
+
+    private void checkPasswordRobustness(final String password) {
         try {
-            Class<?> validatorClass = Class.forName(PropertiesFactory.getSecurityProperties(getEngineSession().getTenantId()).getPasswordValidator());
+            final Class<?> validatorClass = Class.forName(getValidatorClassName());
             Object instanceClass;
             try {
                 instanceClass = validatorClass.newInstance();
-                AbstractStringValidator validator = (AbstractStringValidator) instanceClass;
-                validator.setLocale(getLocale());                
+                final AbstractStringValidator validator = (AbstractStringValidator) instanceClass;
+                validator.setLocale(getLocale());
                 validator.check(password);
                 if (!validator.getErrors().isEmpty()) {
                     throw new ValidationException(validator.getErrors());
-                }    
-            } catch (InstantiationException e) {
+                }
+            } catch (final InstantiationException e) {
                 if (LOGGER.isLoggable(Level.SEVERE)) {
                     LOGGER.log(Level.SEVERE, "Error while instanciating the class", e);
                 }
                 e.printStackTrace();
-            } catch (IllegalAccessException e) {
+            } catch (final IllegalAccessException e) {
                 if (LOGGER.isLoggable(Level.SEVERE)) {
                     LOGGER.log(Level.SEVERE, "Illegal access with the file ", e);
                 }
                 e.printStackTrace();
             }
-        } catch (ClassNotFoundException e) {
+        } catch (final ClassNotFoundException e) {
             if (LOGGER.isLoggable(Level.SEVERE)) {
                 LOGGER.log(Level.SEVERE, "Class not found", e);
             }
             e.printStackTrace();
-        }        
+        }
+    }
+
+    String getValidatorClassName() {
+        return PropertiesFactory.getSecurityProperties(getEngineSession().getTenantId()).getPasswordValidator();
     }
 
     @Override
     public UserItem update(final APIID id, final Map<String, String> item) {
-        if (item != null) {
-            // Finish the upload of the icon
-            final String icon = item.get(UserItem.ATTRIBUTE_ICON);
-            if (!MapUtil.removeIfBlank(item, UserItem.ATTRIBUTE_ICON)) {
-
-                deleteOldIconFileIfExists(id);
-                String newIcon = uploadIcon(icon);
-                item.put(UserItem.ATTRIBUTE_ICON, newIcon);
-            }
-
-            // Do not update password if not set
-            MapUtil.removeIfBlank(item, UserItem.ATTRIBUTE_PASSWORD);
-            if (item.get(UserItem.ATTRIBUTE_PASSWORD) != null) {
-                checkPasswordRobustness(item.get(UserItem.ATTRIBUTE_PASSWORD));                
-            }
+        // Do not update password if not set
+        MapUtil.removeIfBlank(item, UserItem.ATTRIBUTE_PASSWORD);
+        if (item.get(UserItem.ATTRIBUTE_PASSWORD) != null) {
+            checkPasswordRobustness(item.get(UserItem.ATTRIBUTE_PASSWORD));
         }
-        // Update
-        return new UserDatastore(getEngineSession()).update(id, item);
-    }
-
-    private void deleteOldIconFileIfExists(final APIID id) {
-        final UserItem oldUser = new UserDatastore(getEngineSession()).get(id);
-        if (hasIcon(oldUser)) {
-            getIconFile(oldUser).delete();
-        }
-    }
-
-    private File getIconFile(final UserItem oldUser) {
-        return new File(WebBonitaConstantsUtils.getInstance(getEngineSession().getTenantId())
-                .getConsoleDefaultIconsFolder().getPath() + oldUser.getIcon());
-    }
-
-    private boolean hasIcon(final UserItem oldUser) {
-        return oldUser.getIcon() != null && !oldUser.getIcon().isEmpty() && !oldUser.getIcon().equals(UserItem.DEFAULT_USER_ICON);
+        return getUserDatastore().update(id, item);
     }
 
     @Override
     public UserItem get(final APIID id) {
-        final UserItem item = new UserDatastore(getEngineSession()).get(id);
+        final UserItem item = getUserDatastore().get(id);
         if (item != null) {
+
             // Do not let the password output from the API
             item.setPassword(null);
             final String iconPath = item.getIcon();
@@ -176,7 +147,7 @@ public class APIUser extends ConsoleAPI<UserItem> implements APIHasAdd<UserItem>
     public ItemSearchResult<UserItem> search(final int page, final int resultsByPage, final String search, final String orders,
             final Map<String, String> filters) {
 
-        final ItemSearchResult<UserItem> results = new UserDatastore(getEngineSession()).search(page, resultsByPage, search, filters, orders);
+        final ItemSearchResult<UserItem> results = getUserDatastore().search(page, resultsByPage, search, filters, orders);
 
         for (final UserItem item : results.getResults()) {
             if (item != null) {
@@ -190,19 +161,19 @@ public class APIUser extends ConsoleAPI<UserItem> implements APIHasAdd<UserItem>
 
     @Override
     public void delete(final List<APIID> ids) {
-        new UserDatastore(getEngineSession()).delete(ids);
+        getUserDatastore().delete(ids);
     }
 
     @Override
     protected void fillDeploys(final UserItem item, final List<String> deploys) {
         if (isDeployable(UserItem.ATTRIBUTE_MANAGER_ID, deploys, item)) {
             item.setDeploy(UserItem.ATTRIBUTE_MANAGER_ID,
-                    new UserDatastore(getEngineSession()).get(item.getManagerId()));
+                    getUserDatastore().get(item.getManagerId()));
         }
 
         if (isDeployable(UserItem.ATTRIBUTE_CREATED_BY_USER_ID, deploys, item)) {
             item.setDeploy(UserItem.ATTRIBUTE_CREATED_BY_USER_ID,
-                    new UserDatastore(getEngineSession()).get(item.getCreatedByUserId()));
+                    getUserDatastore().get(item.getCreatedByUserId()));
         }
 
         if (deploys.contains(UserItem.DEPLOY_PERSONNAL_DATA)) {
@@ -228,23 +199,13 @@ public class APIUser extends ConsoleAPI<UserItem> implements APIHasAdd<UserItem>
 
         if (counters.contains(UserItem.COUNTER_OPEN_TASKS)) {
             item.setAttribute(UserItem.COUNTER_OPEN_TASKS,
-                    new HumanTaskDatastore(getEngineSession()).getNumberOfOpenTasks(item.getId())
-                    );
+                    new HumanTaskDatastore(getEngineSession()).getNumberOfOpenTasks(item.getId()));
         }
 
         if (counters.contains(UserItem.COUNTER_OVERDUE_TASKS)) {
             item.setAttribute(UserItem.COUNTER_OVERDUE_TASKS,
-                    new HumanTaskDatastore(getEngineSession()).getNumberOfOverdueOpenTasks(item.getId())
-                    );
+                    new HumanTaskDatastore(getEngineSession()).getNumberOfOverdueOpenTasks(item.getId()));
         }
     }
 
-    private String uploadIcon(final String iconTempPath) {
-        final String path = uploadAutoRename(
-                UserItem.ATTRIBUTE_ICON,
-                iconTempPath,
-                WebBonitaConstantsUtils.getInstance(getEngineSession().getTenantId()).getConsoleUserIconsFolder().getPath())
-                .getPath();
-        return path.substring(WebBonitaConstantsUtils.getInstance(getEngineSession().getTenantId()).getConsoleDefaultIconsFolder().getPath().length());
-    }
 }

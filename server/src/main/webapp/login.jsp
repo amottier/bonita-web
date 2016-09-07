@@ -129,7 +129,7 @@
 							<label for="username"><%=i18n._("User")%></label>
 						</div>
 						<div class="input">
-							<input title="<%=i18n._("Username")%>" id="username" name="username" value="<%= StringEscapeUtils.escapeHtml4(JSP.getSessionOrCookie("username", "")) %>" placeholder="<%=i18n._("User")%>" type="text" tabindex="1" maxlength="50" <%=disableLogin ? "disabled=\"disabled\" " : ""%> />
+							<input title="<%=i18n._("Username")%>" id="username" name="username" value="<%= StringEscapeUtils.escapeHtml4(JSP.getSessionOrCookie("username", "")) %>" placeholder="<%=i18n._("User")%>" type="text" tabindex="1" maxlength="255" <%=disableLogin ? "disabled=\"disabled\" " : ""%> />
 						</div>
 					</div>
 					<div class="formentry" title="<%=i18n._("Enter your password")%>">
@@ -147,9 +147,6 @@
 				</div>
 			</form>
 		</div>
-	</div>
-	<div class="footer" id="footer">
-		Bonitasoft © 2014
 	</div>
 </body>
 </html>

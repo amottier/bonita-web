@@ -16,6 +16,12 @@ form{
 				input{
 					height: @inputHeight;
 				}
+				//override bootstrap
+				.alert{
+					padding:0;
+					margin:0;
+					.borderRadius(@form-input-radius);
+				}
 			}
 			&.select .input, textarea, input{
 				.fontSize(@form-input-fontSize);
@@ -156,6 +162,18 @@ form{
 .popupcontainer .form{
 	margin-top: 30px;
 	min-width: 480px;
+}
+
+// Message in popup
+.popupcontainer .message{
+	margin-top: 15px;
+	margin-bottom: 5px;
+	min-width: 480px;
+	color: @form-label-color;
+}
+
+.popupcontainer .viewchoice label{
+	color: @form-label-color;
 }
 
 .formactions, .popupcontainer .footer{

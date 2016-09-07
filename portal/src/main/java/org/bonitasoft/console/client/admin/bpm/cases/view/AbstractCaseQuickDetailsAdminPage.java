@@ -16,7 +16,7 @@
  */
 package org.bonitasoft.console.client.admin.bpm.cases.view;
 
-import static org.bonitasoft.web.toolkit.client.common.i18n.AbstractI18n.*;
+import static org.bonitasoft.web.toolkit.client.common.i18n.AbstractI18n._;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -42,8 +42,10 @@ import org.bonitasoft.web.rest.model.identity.UserItem;
 import org.bonitasoft.web.toolkit.client.common.texttemplate.Arg;
 import org.bonitasoft.web.toolkit.client.data.item.Definitions;
 import org.bonitasoft.web.toolkit.client.data.item.ItemDefinition;
+import org.bonitasoft.web.toolkit.client.data.item.attribute.reader.DateAttributeReader;
 import org.bonitasoft.web.toolkit.client.data.item.attribute.reader.DeployedAttributeReader;
 import org.bonitasoft.web.toolkit.client.data.item.attribute.reader.DescriptionAttributeReader;
+import org.bonitasoft.web.toolkit.client.ui.CssId;
 import org.bonitasoft.web.toolkit.client.ui.JsId;
 import org.bonitasoft.web.toolkit.client.ui.action.RedirectionAction;
 import org.bonitasoft.web.toolkit.client.ui.component.Definition;
@@ -68,7 +70,7 @@ public abstract class AbstractCaseQuickDetailsAdminPage<T extends CaseItem> exte
 
     @Override
     protected void defineTitle(final CaseItem item) {
-        setTitle(_("Case id") + ": " + item.getId() + " - App: "
+        setTitle(_("Case id") + ": " + item.getId() + " - Process: "
                 + item.getDeploy(CaseItem.ATTRIBUTE_PROCESS_ID).getAttributeValue(ProcessItem.ATTRIBUTE_DISPLAY_NAME));
     }
 
@@ -89,7 +91,7 @@ public abstract class AbstractCaseQuickDetailsAdminPage<T extends CaseItem> exte
         metadatas.add(startedBy(item));
         return metadatas;
     }
-    
+
     private ItemDetailsMetadata startedBy(final T item) {
         if (item.getStartedByUserId() == null || item.getStartedBySubstituteUserId() == null
                 || item.getStartedByUserId().toLong().equals(item.getStartedBySubstituteUserId().toLong())) {
@@ -104,8 +106,8 @@ public abstract class AbstractCaseQuickDetailsAdminPage<T extends CaseItem> exte
                 _("Started by"), _("The user that has started this case"));
     }
 
-    private ItemDetailsMetadata addStartedBySubstitute(UserItem executedByUser, UserItem startedBySubstituteUser) {
-        StartedByDelegateAttributeReder attributeReader = new StartedByDelegateAttributeReder(CaseItem.ATTRIBUTE_STARTED_BY_SUBSTITUTE_USER_ID);
+    private ItemDetailsMetadata addStartedBySubstitute(final UserItem executedByUser, final UserItem startedBySubstituteUser) {
+        final StartedByDelegateAttributeReder attributeReader = new StartedByDelegateAttributeReder(CaseItem.ATTRIBUTE_STARTED_BY_SUBSTITUTE_USER_ID);
         attributeReader.setStartedBySubstitute(startedBySubstituteUser);
         attributeReader.setStartedBy(executedByUser);
         return new ItemDetailsMetadata(attributeReader,
@@ -119,7 +121,7 @@ public abstract class AbstractCaseQuickDetailsAdminPage<T extends CaseItem> exte
 
     protected ItemDetailsMetadata processVersion() {
         return new ItemDetailsMetadata(new DeployedAttributeReader(CaseItem.ATTRIBUTE_PROCESS_ID, ProcessItem.ATTRIBUTE_VERSION),
-                _("App version"), _("The version of the app that created this case"));
+                _("Process version"), _("The version of the process that created this case"));
     }
 
     protected abstract String getMoreDetailsPageToken();
@@ -131,10 +133,12 @@ public abstract class AbstractCaseQuickDetailsAdminPage<T extends CaseItem> exte
     }
 
     private Section technicalDetailsSection(final CaseItem item) {
-        return new Section(_("Technical details"))
+        final Section technicalDetailsSection = new Section(_("Technical details"))
                 .addBody(lastExecutedTaskDefinition(item))
                 .addBody(numberOfOpenedTasksDefinition(item))
                 .addBody(numberOfAttachmentDefinition(item));
+        technicalDetailsSection.setId(CssId.QD_SECTION_TECHNICAL_DETAILS);
+        return technicalDetailsSection;
     }
 
     private Definition lastExecutedTaskDefinition(final CaseItem item) {
@@ -161,10 +165,12 @@ public abstract class AbstractCaseQuickDetailsAdminPage<T extends CaseItem> exte
     private Section failedTaskSection(final CaseItem item) {
         final ItemTable failedTasksTable = getFailedTaskTable(item);
         prepareFailedTasksTable(failedTasksTable);
-        final Section section = new Section(_("Failed tasks"), failedTasksTable.setView(VIEW_TYPE.VIEW_LIST));
-        section.addClass("tasks");
-        section.addClass("failed");
-        return section;
+        final Section failedTaskSection = new Section(_("Failed tasks"), failedTasksTable.setView(VIEW_TYPE.VIEW_LIST));
+        failedTaskSection.addClass("tasks");
+        failedTaskSection.addClass("failed");
+        failedTaskSection.addCssTaskType();
+        failedTaskSection.setId(CssId.QD_SECTION_FAILED_TASKS);
+        return failedTaskSection;
     }
 
     protected ItemTable getFailedTaskTable(final CaseItem item) {
@@ -172,12 +178,12 @@ public abstract class AbstractCaseQuickDetailsAdminPage<T extends CaseItem> exte
                 .addHiddenFilter(TaskItem.ATTRIBUTE_CASE_ID, item.getId())
                 .addHiddenFilter(TaskItem.ATTRIBUTE_STATE, TaskItem.VALUE_STATE_FAILED)
                 .addColumn(TaskItem.ATTRIBUTE_DISPLAY_NAME, _("Name"))
-                .addColumn(TaskItem.ATTRIBUTE_LAST_UPDATE_DATE, _("Update date"))
+                .addColumn(new DateAttributeReader(TaskItem.ATTRIBUTE_LAST_UPDATE_DATE), _("Update date"))
                 .addColumn(new DeployedUserReader(TaskItem.ATTRIBUTE_EXECUTED_BY_USER_ID), _("Executed by"))
                 .addColumn(new DescriptionAttributeReader(TaskItem.ATTRIBUTE_DISPLAY_DESCRIPTION, TaskItem.ATTRIBUTE_DESCRIPTION), _("Description"))
                 .addCellFormatter(TaskItem.ATTRIBUTE_DISPLAY_NAME, new FlowNodeDisplayNameFormatter())
                 .addCellFormatter(TaskItem.ATTRIBUTE_EXECUTED_BY_USER_ID + "_" + TaskItem.ATTRIBUTE_EXECUTED_BY_USER_ID, new SpanPrepender(_("Executed by:")))
-                .addCellFormatter(TaskItem.ATTRIBUTE_LAST_UPDATE_DATE, new SpanPrepender(_("Failed")))
+                .addCellFormatter(TaskItem.ATTRIBUTE_LAST_UPDATE_DATE, new SpanPrepender(_("Failed on:")))
                 .addCellFormatter(TaskItem.ATTRIBUTE_DISPLAY_DESCRIPTION, new SpanPrepender(_("Description:")))
                 .setOrder(TaskItem.ATTRIBUTE_LAST_UPDATE_DATE, false)
                 .setActions(getTaskRedirectionAction());

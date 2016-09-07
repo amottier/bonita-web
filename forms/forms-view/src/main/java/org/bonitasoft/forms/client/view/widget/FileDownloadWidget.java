@@ -5,12 +5,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -22,6 +22,7 @@ import org.bonitasoft.forms.client.view.SupportedFieldTypes;
 import org.bonitasoft.forms.client.view.common.RpcFormsServices;
 import org.bonitasoft.forms.client.view.common.URLUtils;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Composite;
@@ -30,9 +31,9 @@ import com.google.gwt.user.client.ui.Image;
 
 /**
  * Widget displaying a file download link
- * 
+ *
  * @author Anthony Birembaut
- * 
+ *
  */
 public class FileDownloadWidget extends Composite {
 
@@ -49,17 +50,19 @@ public class FileDownloadWidget extends Composite {
 
     protected boolean hasImagePreview;
 
-    private final String formID;
+    protected final String formID;
 
-    private String imageServletURL;
+    protected final String imageServletURL;
 
-    private final Map<String, Object> contextMap;
+    protected final Map<String, Object> contextMap;
 
-    private final String attachmentServletURL;
+    protected final String attachmentServletURL;
+
+    protected final String valueType;
 
     /**
      * Constructor
-     * 
+     *
      * @param contextMap
      * @param valueType
      * @param attachmentId
@@ -73,9 +76,9 @@ public class FileDownloadWidget extends Composite {
 
     /**
      * Constructor
-     * 
+     *
      * @param contextMap
-     * 
+     *
      * @param taskUUIDStr
      * @param processUUIDStr
      * @param instanceUUIDStr
@@ -91,28 +94,34 @@ public class FileDownloadWidget extends Composite {
         this.attachmentId = attachmentId;
         this.formID = formID;
         this.contextMap = contextMap;
+        this.valueType = valueType;
 
         flowPanel = new FlowPanel();
         attachmentServletURL = RpcFormsServices.getAttachmentDownloadURL();
+        imageServletURL = RpcFormsServices.getAttachmentImageURL();
         String downloadURL;
         if (SupportedFieldTypes.JAVA_FILE_CLASSNAME.equals(valueType)) {
             downloadURL = URLUtils.getInstance().getAttachmentURL(attachmentServletURL, formID, contextMap, this.attachmentId, fileName);
         } else {
             downloadURL = fileName;
         }
-
         if (this.hasImagePreview) {
-            imageServletURL = RpcFormsServices.getAttachmentImageURL();
-            final String imageURL = URLUtils.getInstance().getAttachmentURL(imageServletURL, formID, contextMap, this.attachmentId, fileName);
             previewImage = new Image();
             previewImage.setStyleName("bonita_image_preview");
-            if (fileName != null) {
-                previewImage.setUrl(imageURL);
-                previewImage.setTitle(fileName);
+            if (SupportedFieldTypes.JAVA_FILE_CLASSNAME.equals(valueType)) {
+                final String imageURL = URLUtils.getInstance().getAttachmentURL(imageServletURL, formID, contextMap, this.attachmentId, fileName);
+                if (fileName != null) {
+                    previewImage.setUrl(imageURL);
+                    previewImage.setTitle(fileName);
+                }
+            } else {
+                if (fileName != null) {
+                    previewImage.setUrl(fileName);
+                }
             }
             flowPanel.add(previewImage);
         }
-        fileNameLabel = new Anchor();
+        fileNameLabel = GWT.create(Anchor.class);
         fileNameLabel.setStyleName("bonita_download_link");
         if (fileName != null) {
             fileNameLabel.setHref(downloadURL);
@@ -125,14 +134,22 @@ public class FileDownloadWidget extends Composite {
 
     public void setFileName(final String fileName) {
 
-        if (hasImagePreview) {
-            final String imageURL = URLUtils.getInstance().getAttachmentURL(imageServletURL, formID, contextMap, attachmentId, fileName);
-            previewImage.setUrl(imageURL);
-            previewImage.setTitle(fileName);
+        if (SupportedFieldTypes.JAVA_FILE_CLASSNAME.equals(valueType)) {
+            if (hasImagePreview) {
+                final String imageURL = URLUtils.getInstance().getAttachmentURL(imageServletURL, formID, contextMap, attachmentId, fileName);
+                previewImage.setUrl(imageURL);
+                previewImage.setTitle(fileName);
+            }
+            final String downloadURL = URLUtils.getInstance().getAttachmentURL(attachmentServletURL, formID, contextMap, attachmentId, fileName);
+            fileNameLabel.setHref(downloadURL);
+            fileNameLabel.setText(fileName);
+        } else {
+            if (hasImagePreview) {
+                previewImage.setUrl(fileName);
+            }
+            fileNameLabel.setHref(fileName);
+            fileNameLabel.setText(fileName);
         }
-        final String downloadURL = URLUtils.getInstance().getAttachmentURL(attachmentServletURL, formID, contextMap, attachmentId, fileName);
-        fileNameLabel.setHref(downloadURL);
-        fileNameLabel.setText(fileName);
     }
 
     public void setFilePath(String filePath, final String realFileName) {

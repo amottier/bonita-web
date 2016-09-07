@@ -4,7 +4,9 @@ import static java.util.Arrays.asList;
 import static org.bonitasoft.test.toolkit.organization.TestUserFactory.getJohnCarpenter;
 import static org.bonitasoft.test.toolkit.organization.TestUserFactory.getMrSpechar;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.spy;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -22,6 +24,7 @@ import org.bonitasoft.test.toolkit.organization.TestUserFactory;
 import org.bonitasoft.web.rest.model.identity.RoleItem;
 import org.bonitasoft.web.rest.server.AbstractConsoleTest;
 import org.bonitasoft.web.rest.server.framework.search.ItemSearchResult;
+import org.bonitasoft.web.toolkit.client.common.exception.api.APIForbiddenException;
 import org.bonitasoft.web.toolkit.client.data.APIID;
 import org.junit.Assert;
 import org.junit.Test;
@@ -71,6 +74,21 @@ public class APIRoleIntegrationTest extends AbstractConsoleTest {
 
         Assert.assertNotNull("Role not found", output);
         assertItemEquals("Wrong role found", input, output);
+        getAPIRole().runDelete(Arrays.asList(input.getId()));
+    }
+
+    @Test(expected = APIForbiddenException.class)
+    public void it_throws_an_exception_adding_icon_with_unauthorized_path() {
+        // Add
+
+        final APIRole spyApiRole = spy(getAPIRole());
+
+        RoleItem input = new RoleItem();
+        input.setName("Developper");
+        input.setDescription("The guys who drink a lot of coffee");
+        input.setIcon(".." + File.separator + ".." + File.separator + ".." + File.separator + "icon.jpg");
+
+        input = spyApiRole.runAdd(input);
     }
 
     @Test
@@ -94,6 +112,9 @@ public class APIRoleIntegrationTest extends AbstractConsoleTest {
 
         Assert.assertNotNull("Failed to deploy intiator user", output.getCreatedByUserId());
         Assert.assertEquals("Wrong process deployed", getInitiator().getUserName(), output.getCreatedByUser().getUserName());
+
+        getAPIRole().runDelete(Arrays.asList(input.getId()));
+
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +123,7 @@ public class APIRoleIntegrationTest extends AbstractConsoleTest {
 
     @Test
     public void testSearch() throws Exception {
-        TestRoleFactory.createRandomRoles(13);
+        TestRoleFactory.getInstance().createRandomRoles(13);
 
         final ItemSearchResult<RoleItem> roleItems = getAPIRole().runSearch(0, 10, null, null, null, null, null);
 
@@ -124,28 +145,27 @@ public class APIRoleIntegrationTest extends AbstractConsoleTest {
 
     @Test
     public void testDeleteOne() throws Exception {
-        TestRoleFactory.createRandomRoles(13);
+        TestRoleFactory.getInstance().createRandomRoles(13);
 
         final ItemSearchResult<RoleItem> roleItems = getAPIRole().runSearch(0, 10, null, null, null, null, null);
         getAPIRole().runDelete(Arrays.asList(roleItems.getResults().get(0).getId()));
 
         final ItemSearchResult<RoleItem> roleItemsAfter = getAPIRole().runSearch(0, 10, null, null, null, null, null);
-        Assert.assertTrue("Failed to delete one role", roleItemsAfter.getTotal() == 12);
+        Assert.assertEquals("Failed to delete one role", 12, roleItemsAfter.getTotal());
     }
 
     @Test
     public void testDeleteMultiple() throws Exception {
-        TestRoleFactory.createRandomRoles(13);
+        TestRoleFactory.getInstance().createRandomRoles(13);
 
         final ItemSearchResult<RoleItem> roleItems = getAPIRole().runSearch(0, 10, null, null, null, null, null);
 
         getAPIRole().runDelete(Arrays.asList(
                 roleItems.getResults().get(1).getId(),
-                roleItems.getResults().get(0).getId()
-                ));
+                roleItems.getResults().get(0).getId()));
 
         final ItemSearchResult<RoleItem> roleItemsAfter = getAPIRole().runSearch(0, 10, null, null, null, null, null);
-        Assert.assertTrue("Failed to delete multiple roles", roleItemsAfter.getTotal() == 11);
+        Assert.assertEquals("Failed to delete multiple roles", 11, roleItemsAfter.getTotal());
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -165,7 +185,7 @@ public class APIRoleIntegrationTest extends AbstractConsoleTest {
         Assert.assertNotNull("Failed to add a new role", input);
 
         // Update
-        final Map<String, String> updates = new HashMap<String, String>();
+        final Map<String, String> updates = new HashMap<>();
         updates.put(RoleItem.ATTRIBUTE_DESCRIPTION, newDescription);
         getAPIRole().runUpdate(input.getId(), updates);
 
@@ -174,22 +194,44 @@ public class APIRoleIntegrationTest extends AbstractConsoleTest {
 
         Assert.assertNotNull("Role not found", output);
         Assert.assertEquals("Update of role failed", newDescription, output.getDescription());
+
+        getAPIRole().runDelete(Arrays.asList(input.getId()));
+    }
+
+    @Test(expected = APIForbiddenException.class)
+    public void it_throws_an_exception_updating_icon_with_unauthorized_path() {
+        // Add
+        RoleItem input = new RoleItem();
+        final APIRole spyApiRole = spy(getAPIRole());
+        input.setName("Developper");
+        input.setDescription("The guys who drink a lot of coffee");
+        input = spyApiRole.runAdd(input);
+        final APIID id = input.getId();
+        Assert.assertNotNull("Failed to add a new role", input);
+        input = new RoleItem();
+        input.setIcon(".." + File.separator + ".." + File.separator + ".." + File.separator + "icon.jpg");
+
+        try {
+            input = spyApiRole.runUpdate(id, input.getAttributes());
+        } finally {
+            spyApiRole.runDelete(Arrays.asList(id));
+        }
     }
 
     @Test
     public void weCanCountAllUsersInAGroup() throws Exception {
-        Role roleWith2Users = createRoleWithAssignedUsers(getJohnCarpenter(), getMrSpechar());
-        List<String> counters = asList(RoleItem.COUNTER_NUMBER_OF_USERS);
-        
-        RoleItem roleItem = getAPIRole().runGet(APIID.makeAPIID(roleWith2Users.getId()), null, counters);
-        
+        final Role roleWith2Users = createRoleWithAssignedUsers(getJohnCarpenter(), getMrSpechar());
+        final List<String> counters = asList(RoleItem.COUNTER_NUMBER_OF_USERS);
+
+        final RoleItem roleItem = getAPIRole().runGet(APIID.makeAPIID(roleWith2Users.getId()), null, counters);
+
         assertEquals(2L, (long) roleItem.getNumberOfUsers());
     }
-    
-    private Role createRoleWithAssignedUsers(TestUser... users) {
-        TestGroup aGroup = TestGroupFactory.getRAndD();
-        TestRole aRole = TestRoleFactory.getDeveloper();
-        for (TestUser user : users) {
+
+    private Role createRoleWithAssignedUsers(final TestUser... users) {
+        final TestGroup aGroup = TestGroupFactory.getRAndD();
+        final TestRole aRole = TestRoleFactory.getDeveloper();
+        for (final TestUser user : users) {
             TestMembershipFactory.assignMembership(user, aGroup, aRole);
         }
         return aRole.getRole();

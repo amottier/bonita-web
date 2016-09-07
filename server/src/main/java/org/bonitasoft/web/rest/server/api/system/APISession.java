@@ -17,8 +17,7 @@ package org.bonitasoft.web.rest.server.api.system;
 import java.util.Arrays;
 import java.util.List;
 
-import org.bonitasoft.console.common.server.login.LoginManagerProperties;
-import org.bonitasoft.console.common.server.login.LoginManagerPropertiesFactory;
+import org.bonitasoft.console.common.server.auth.AuthenticationManagerProperties;
 import org.bonitasoft.engine.profile.Profile;
 import org.bonitasoft.web.rest.server.api.ConsoleAPI;
 import org.bonitasoft.web.rest.server.engineclient.EngineAPIAccessor;
@@ -36,8 +35,6 @@ import org.bonitasoft.web.toolkit.client.data.item.Definitions;
  */
 public class APISession extends ConsoleAPI<SessionItem> {
 
-    public static final LoginManagerPropertiesFactory loginManagerPropertiesFactory = new LoginManagerPropertiesFactory();
-
     @Override
     protected SessionDefinition defineItemDefinition() {
         return (SessionDefinition) Definitions.get(SessionDefinition.TOKEN);
@@ -54,6 +51,7 @@ public class APISession extends ConsoleAPI<SessionItem> {
             session.setAttribute(SessionItem.ATTRIBUTE_USERNAME, apiSession.getUserName());
             session.setAttribute(SessionItem.ATTRIBUTE_IS_TECHNICAL_USER, String.valueOf(apiSession.isTechnicalUser()));
             session.setAttribute(SessionItem.ATTRIBUTE_VERSION, getVersion());
+            session.setAttribute(SessionItem.ATTRIBUTE_COPYRIGHT, getCopyright());
             session.setAttribute(SessionItem.ATTRIBUTE_CONF, getUserRights(apiSession));
         }
         return session;
@@ -87,12 +85,12 @@ public class APISession extends ConsoleAPI<SessionItem> {
                 .build();
         // TODO restrict the current user from being able to call the logout directly as a profileEntry (is it possible)?
         if (isLogoutDisabled(session.getTenantId())) {
-            rights.add(LoginManagerProperties.LOGOUT_DISABLED);
+            rights.add(AuthenticationManagerProperties.LOGOUT_DISABLED);
         }
         return JSonSerializer.serialize(rights);
     }
 
-    private ProfileEntryEngineClient createProfileEntryEngineClient(org.bonitasoft.engine.session.APISession session) {
+    private ProfileEntryEngineClient createProfileEntryEngineClient(final org.bonitasoft.engine.session.APISession session) {
         final EngineClientFactory engineClientFactory = new EngineClientFactory(new EngineAPIAccessor(session));
         return engineClientFactory.createProfileEntryEngineClient();
     }
@@ -101,13 +99,17 @@ public class APISession extends ConsoleAPI<SessionItem> {
      * enable to know if the logout button is visible or not
      *
      * @param tenantId
-     *            the current user tenant id
+     *        the current user tenant id
      */
-    protected boolean isLogoutDisabled(long tenantId) {
-        return loginManagerPropertiesFactory.getProperties(tenantId).isLogoutDisabled();
+    protected boolean isLogoutDisabled(final long tenantId) {
+        return AuthenticationManagerProperties.getProperties(tenantId).isLogoutDisabled();
     }
 
     public String getVersion() {
-        return new BonitaVersion(new VersionFile()).toString();
+        return new BonitaVersion(new VersionFile()).getVersion();
+    }
+
+    public String getCopyright() {
+        return new BonitaVersion(new VersionFile()).getCopyright();
     }
 }

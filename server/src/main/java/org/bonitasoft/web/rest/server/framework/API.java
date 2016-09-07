@@ -5,12 +5,10 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -18,26 +16,30 @@ package org.bonitasoft.web.rest.server.framework;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.http.HttpSession;
 
-import org.bonitasoft.web.rest.server.framework.api.APIHasFiles;
+import org.bonitasoft.console.common.server.utils.UnauthorizedFolderException;
 import org.bonitasoft.web.rest.server.framework.api.Datastore;
 import org.bonitasoft.web.rest.server.framework.api.DatastoreHasAdd;
 import org.bonitasoft.web.rest.server.framework.api.DatastoreHasDelete;
 import org.bonitasoft.web.rest.server.framework.api.DatastoreHasGet;
 import org.bonitasoft.web.rest.server.framework.api.DatastoreHasSearch;
 import org.bonitasoft.web.rest.server.framework.api.DatastoreHasUpdate;
-import org.bonitasoft.web.rest.server.framework.exception.APIAttributeException;
 import org.bonitasoft.web.rest.server.framework.exception.APIFileUploadNotFoundException;
 import org.bonitasoft.web.rest.server.framework.exception.ForbiddenAttributesException;
 import org.bonitasoft.web.rest.server.framework.search.ItemSearchResult;
 import org.bonitasoft.web.rest.server.framework.utils.FilePathBuilder;
 import org.bonitasoft.web.toolkit.client.common.exception.api.APIException;
+import org.bonitasoft.web.toolkit.client.common.exception.api.APIForbiddenException;
 import org.bonitasoft.web.toolkit.client.common.exception.api.APIItemNotFoundException;
 import org.bonitasoft.web.toolkit.client.common.exception.api.APIMethodNotAllowedException;
 import org.bonitasoft.web.toolkit.client.common.util.MapUtil;
@@ -53,13 +55,14 @@ import org.bonitasoft.web.toolkit.client.data.item.template.ItemHasUniqueId;
 
 /**
  * @author Séverin Moussel
- * 
  */
 public abstract class API<ITEM extends IItem> {
 
     protected ItemDefinition<ITEM> itemDefinition = null;
 
-    private final Map<String, Deployer> deployers = new HashMap<String, Deployer>();
+    private final Map<String, Deployer> deployers = new HashMap<>();
+
+    private static Logger LOGGER = Logger.getLogger(API.class.getName());
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // CONSTRUCTORS
@@ -80,9 +83,9 @@ public abstract class API<ITEM extends IItem> {
 
     /**
      * Set the caller.
-     * 
+     *
      * @param caller
-     *            The ServletCall responsible of this service.
+     *        The ServletCall responsible of this service.
      */
     public final void setCaller(final APIServletCall caller) {
         this.caller = caller;
@@ -143,16 +146,6 @@ public abstract class API<ITEM extends IItem> {
         // Stop there if forbidden attributes are set
         checkForbiddenAttributes(item.getAttributes());
 
-        // Finish files uploading
-        if (this instanceof APIHasFiles) {
-            final APIHasFiles apiHasFiles = (APIHasFiles) this;
-            final List<String> fileAttributes = getFileAttributes();
-
-            for (final String fileAttribute : fileAttributes) {
-                uploadForAdd(fileAttribute, item, apiHasFiles.getUploadPath(fileAttribute), apiHasFiles.getSavedPathPrefix(fileAttribute));
-            }
-        }
-
         // Run specific implementation
         return add((ITEM) item);
     }
@@ -178,16 +171,6 @@ public abstract class API<ITEM extends IItem> {
 
         // Stop there if forbidden attributes are set
         checkForbiddenAttributes(attributes);
-
-        // Finish files uploading
-        if (this instanceof APIHasFiles) {
-            final APIHasFiles apiHasFiles = (APIHasFiles) this;
-            final List<String> fileAttributes = getFileAttributes();
-
-            for (final String fileAttribute : fileAttributes) {
-                uploadForUpdate(fileAttribute, id, attributes, apiHasFiles.getUploadPath(fileAttribute), apiHasFiles.getSavedPathPrefix(fileAttribute));
-            }
-        }
 
         // Run specific implementation
         return this.update(id, attributes);
@@ -293,21 +276,6 @@ public abstract class API<ITEM extends IItem> {
             id.setItemDefinition(getItemDefinition());
         }
 
-        if (this instanceof APIHasFiles) {
-            final APIHasFiles apiHasFiles = (APIHasFiles) this;
-
-            final List<String> fileAttributes = getFileAttributes();
-            if (!fileAttributes.isEmpty()) {
-                for (final APIID id : ids) {
-                    final IItem item = get(id);
-                    for (final String fileAttribute : fileAttributes) {
-                        deleteFile(fileAttribute, item, apiHasFiles.getUploadPath(fileAttribute), apiHasFiles.getSavedPathPrefix(fileAttribute));
-                    }
-                }
-            }
-
-        }
-
         delete(ids);
     }
 
@@ -338,43 +306,32 @@ public abstract class API<ITEM extends IItem> {
     // PARAMETERS TOOLS
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    protected final File getUploadedFile(final String attributeName, final String attributeValue) {
+    protected final File getUploadedFile(final String attributeName, final String attributeValue) throws IOException {
         if (attributeValue == null || attributeValue.isEmpty()) {
             return null;
         }
-        final File file = new File(attributeValue);
+
+        final String tmpIconPath = getCompleteTempFilePath(attributeValue);
+
+        final File file = new File(tmpIconPath);
         if (!file.exists()) {
             throw new APIFileUploadNotFoundException(attributeName, attributeValue);
         }
         return file;
     }
 
-    /**
-     * Upload the file to the defined directory.<br>
-     * The original filename will be kept.
-     * 
-     * @param attributeName
-     *            The name of the attribute representing the file.
-     * @param attributeValue
-     *            The value of the attribute representing the file.
-     * @param newDirectory
-     *            The destination directory path.
-     * @return This method return the file in the destination directory.
-     */
-    protected final File upload(final String attributeName, final String attributeValue, final String newDirectory) {
-        return upload(attributeName, attributeValue, newDirectory, null);
-    }
+    abstract protected String getCompleteTempFilePath(String path) throws IOException;
 
     /**
      * Upload the file to the defined directory and rename it to make sure its filename is unique.<br>
      * The original filename will be kept.
-     * 
+     *
      * @param attributeName
-     *            The name of the attribute representing the file.
+     *        The name of the attribute representing the file.
      * @param attributeValue
-     *            The value of the attribute representing the file.
+     *        The value of the attribute representing the file.
      * @param newDirectory
-     *            The destination directory path.
+     *        The destination directory path.
      * @return This method return the file in the destination directory.
      */
     protected final File uploadAutoRename(final String attributeName, final String attributeValue, final String newDirectory) {
@@ -383,14 +340,17 @@ public abstract class API<ITEM extends IItem> {
             final File destinationDirectory = new File(newDirectory);
             String destinationFilename = getUploadedFile(attributeName, attributeValue).getName();
 
-            if (destinationDirectory.exists()) {
-                final String extension = this.getFileExtension(destinationFilename);
-                final File destinationFile = File.createTempFile("avatar", extension, destinationDirectory);
-                destinationFilename = destinationFile.getName().substring(0, destinationFile.getName().length() - extension.length());
+            if (!destinationDirectory.exists()) {
+                destinationDirectory.mkdirs();
             }
+            final String extension = this.getFileExtension(destinationFilename);
+            final File destinationFile = File.createTempFile("avatar", extension, destinationDirectory);
+            destinationFilename = destinationFile.getName().substring(0, destinationFile.getName().length() - extension.length());
 
             return upload(attributeName, attributeValue, newDirectory, destinationFilename);
 
+        } catch (final UnauthorizedFolderException e) {
+            throw new APIForbiddenException(e.getMessage());
         } catch (final IOException e) {
             throw new APIException(e);
         }
@@ -398,18 +358,19 @@ public abstract class API<ITEM extends IItem> {
 
     /**
      * Rename and upload the file to the defined directory.
-     * 
+     *
      * @param attributeName
-     *            The name of the attribute representing the file.
+     *        The name of the attribute representing the file.
      * @param attributeValue
-     *            The value of the attribute representing the file.
+     *        The value of the attribute representing the file.
      * @param newDirectory
-     *            The destination directory path.
+     *        The destination directory path.
      * @param newName
-     *            The name to set to the file without the extension (the original extension will be kept)
+     *        The name to set to the file without the extension (the original extension will be kept)
      * @return This method return the file in the destination directory.
+     * @throws IOException
      */
-    protected final File upload(final String attributeName, final String attributeValue, final String newDirectory, final String newName) {
+    protected final File upload(final String attributeName, final String attributeValue, final String newDirectory, final String newName) throws IOException {
 
         // Check if the destination directory already exists. If not, creates it.
         final File destinationDirectory = new File(newDirectory);
@@ -428,7 +389,7 @@ public abstract class API<ITEM extends IItem> {
         final File destinationFile = new File(destinationDirectory.getAbsolutePath() + File.separator + destinationName);
         try {
             destinationFile.delete();
-            file.renameTo(destinationFile);
+            Files.move(file.toPath(), destinationFile.toPath());
         } catch (final Exception e) {
             e.getMessage();
         }
@@ -449,85 +410,16 @@ public abstract class API<ITEM extends IItem> {
         return extension;
     }
 
-    /**
-     * Get a value in a map of attributes and convert it to an APIID.
-     * 
-     * @param attributes
-     *            The map of attributes to search in
-     * @param attributeName
-     *            The name of the attribute to get.
-     * 
-     * @return This method returns the APIID corresponding or NULL if the attribute doesn't exist or is empty.
-     */
-    protected final APIID getAttributeAsAPIID(final Map<String, String> attributes, final String attributeName) {
-        final String attributeValue = attributes.get(attributeName);
-        if (attributeValue == null || attributeValue.isEmpty()) {
-            return null;
-        }
-
-        return APIID.makeAPIID(attributeValue);
-    }
-
-    /**
-     * Get a value in a map of attributes and convert it to a long.
-     * 
-     * @param attributes
-     *            The map of attributes to search in
-     * @param attributeName
-     *            The name of the attribute to get.
-     * 
-     * @return This method returns the APIID corresponding or NULL if the attribute doesn't exist or is empty.
-     */
-    protected final Long getAttributeAsLong(final Map<String, String> attributes, final String attributeName) {
-        try {
-            return MapUtil.getValueAsLong(attributes, attributeName);
-        } catch (final NumberFormatException e) {
-            throw new APIAttributeException(attributeName, "Attribute " + attributeName + " format is invalid : " + attributes.get(attributeName));
-        }
-    }
-
-    /**
-     * Get a value in a map of attributes and convert it to an Integer.
-     * 
-     * @param attributes
-     *            The map of attributes to search in
-     * @param attributeName
-     *            The name of the attribute to get.
-     * 
-     * @return This method returns the APIID corresponding or NULL if the attribute doesn't exist or is empty.
-     */
-    protected final Integer getAttributeAsInteger(final Map<String, String> attributes, final String attributeName) {
-        try {
-            return MapUtil.getValueAsInteger(attributes, attributeName);
-        } catch (final NumberFormatException e) {
-            throw new APIAttributeException(attributeName, "Attribute " + attributeName + " format is invalid : " + attributes.get(attributeName));
-        }
-    }
-
-    /**
-     * Get a value in a map of attributes and convert it to an Integer.
-     * 
-     * @param attributes
-     *            The map of attributes to search in
-     * @param attributeName
-     *            The name of the attribute to get.
-     * 
-     * @return This method returns the APIID corresponding or NULL if the attribute doesn't exist or is empty.
-     */
-    protected final Boolean getAttributeAsBoolean(final Map<String, String> attributes, final String attributeName) {
-        try {
-            return MapUtil.getValueAsBoolean(attributes, attributeName);
-        } catch (final IllegalArgumentException e) {
-            throw new APIAttributeException(attributeName, "Attribute " + attributeName + " format is invalid : " + attributes.get(attributeName));
-        }
-    }
-
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // DEPLOYS AND COUNTERS
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public void addDeployer(final Deployer deployer) {
         deployers.put(deployer.getDeployedAttribute(), deployer);
+    }
+
+    public Map<String, Deployer> getDeployers() {
+        return Collections.unmodifiableMap(deployers);
     }
 
     protected void fillDeploys(final ITEM item, final List<String> deploys) {
@@ -538,8 +430,20 @@ public abstract class API<ITEM extends IItem> {
 
     private void deployAttribute(final String attribute, final ITEM item) {
         if (deployers.containsKey(attribute)) {
-            deployers.get(attribute).deployIn(item);
+            try {
+                deployers.get(attribute).deployIn(item);
+            } catch (final Exception e) {
+                if (LOGGER.isLoggable(Level.FINE)) {
+                    LOGGER.log(Level.FINE, getFailedDeployMessage(attribute, item), e);
+                } else if (LOGGER.isLoggable(Level.INFO)) {
+                    LOGGER.log(Level.INFO, getFailedDeployMessage(attribute, item));
+                }
+            }
         }
+    }
+
+    protected String getFailedDeployMessage(final String attribute, final ITEM item) {
+        return "Could not deploy attribute '" + attribute + "' on item " + item.toString();
     }
 
     protected void fillCounters(final ITEM item, final List<String> counters) {
@@ -562,7 +466,7 @@ public abstract class API<ITEM extends IItem> {
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private List<String> getFileAttributes() {
-        final List<String> results = new ArrayList<String>();
+        final List<String> results = new ArrayList<>();
 
         for (final ItemAttribute attribute : getItemDefinition().getAttributes()) {
             if (attribute.getType().equals(ItemAttribute.TYPE.IMAGE) || attribute.getType().equals(ItemAttribute.TYPE.FILE)) {
@@ -575,31 +479,16 @@ public abstract class API<ITEM extends IItem> {
 
     /**
      * Upload and replace a file in an item<br />
-     * The resulted path will be "filename.ext"
-     * 
-     * @param attributeName
-     *            The name of the attribute that contains a file to upload
-     * @param item
-     *            The item containing the attribute to upload
-     * @param targetFolderPath
-     *            The path of the directory where the uploaded file will be stored
-     */
-    protected final void uploadForAdd(final String attributeName, final IItem item, final String targetFolderPath) {
-        uploadForAdd(attributeName, item, targetFolderPath, "");
-    }
-
-    /**
-     * Upload and replace a file in an item<br />
      * The resulted path will be "subFolder/filename.ext"
-     * 
+     *
      * @param attributeName
-     *            The name of the attribute that contains a file to upload
+     *        The name of the attribute that contains a file to upload
      * @param item
-     *            The item containing the attribute to upload
+     *        The item containing the attribute to upload
      * @param targetPath
-     *            The path of the directory where the uploaded file will be stored
+     *        The path of the directory where the uploaded file will be stored
      * @param prefix
-     *            The specific folder under targetFolderPath
+     *        The specific folder under targetFolderPath
      */
     protected final void uploadForAdd(final String attributeName, final IItem item, final String targetPath, final String prefix) {
 
@@ -613,57 +502,10 @@ public abstract class API<ITEM extends IItem> {
     }
 
     /**
-     * Upload and replace a file in a map<br />
-     * The resulted path will be "filename.ext"
-     * 
      * @param attributeName
-     *            The name of the attribute that contains a file to upload
      * @param item
-     *            The item containing the attribute to upload
-     * @param targetFolderPath
-     *            The path of the directory where the uploaded file will be stored
-     */
-    protected final void uploadForUpdate(final String attributeName, final APIID id, final Map<String, String> item, final String targetFolderPath) {
-        uploadForUpdate(attributeName, id, item, targetFolderPath, "");
-    }
-
-    /**
-     * Upload and replace a file in a map<br />
-     * The resulted path will be "subFolder/filename.ext"
-     * 
-     * @param attributeName
-     *            The name of the attribute that contains a file to upload
-     * @param item
-     *            The item containing the attribute to upload
      * @param targetPath
-     *            The path of the directory where the uploaded file will be stored
      * @param prefix
-     *            The path to add before the filename before saving
-     */
-    protected final void uploadForUpdate(final String attributeName, final APIID id, final Map<String, String> item, final String targetPath,
-            final String prefix) {
-        if (item != null) {
-
-            // Finish the upload of the icon
-            if (!MapUtil.removeIfBlank(item, attributeName)) {
-
-                // Delete old icon file
-                final IItem oldItem = get(id);
-                deleteFile(attributeName, oldItem, targetPath, prefix);
-
-                // Upload new icon file
-                final String filename = uploadAutoRename(attributeName, item.get(attributeName), targetPath).getName();
-
-                item.put(attributeName, new FilePathBuilder(prefix).append(filename).toString());
-            }
-        }
-    }
-
-    /**
-     * @param attributeName
-     * @param item
-     * @param targetPath
-     * @param subFolder
      */
     private void deleteFile(final String attributeName, final IItem item, final String targetPath, final String prefix) {
         if (item == null || item.getAttributeValue(attributeName) == null || item.getAttributeValue(attributeName).isEmpty()) {
@@ -684,7 +526,7 @@ public abstract class API<ITEM extends IItem> {
 
     /**
      * Override this method to define attributes that are not allowed to be set manually during ADD or UPDATE.
-     * 
+     *
      * @return This method must returns a List of forbidden attributes' name.
      */
     protected List<String> defineReadOnlyAttributes() {
@@ -694,7 +536,7 @@ public abstract class API<ITEM extends IItem> {
     private void checkForbiddenAttributes(final Map<String, String> attributes) {
 
         // List forbidden attributes
-        final List<String> forbiddenAttributes = new ArrayList<String>();
+        final List<String> forbiddenAttributes = new ArrayList<>();
         final List<String> definedForbiddenAttributes = defineReadOnlyAttributes();
         if (definedForbiddenAttributes != null) {
             forbiddenAttributes.addAll(definedForbiddenAttributes);
@@ -707,7 +549,7 @@ public abstract class API<ITEM extends IItem> {
         }
 
         // List forbidden attributes found in the request
-        final List<String> errorAttributes = new ArrayList<String>();
+        final List<String> errorAttributes = new ArrayList<>();
         for (final String forbiddenAttribute : forbiddenAttributes) {
             if (!MapUtil.isBlank(attributes, forbiddenAttribute)) {
                 errorAttributes.add(forbiddenAttribute);
@@ -724,7 +566,7 @@ public abstract class API<ITEM extends IItem> {
      * @return
      */
     private List<String> getForbiddenAttributesByInterfaces() {
-        final List<String> forbiddenAttributes = new ArrayList<String>();
+        final List<String> forbiddenAttributes = new ArrayList<>();
 
         @SuppressWarnings("unchecked")
         // final T modelItem = (T) getItemDefinition().createItem();
@@ -750,4 +592,5 @@ public abstract class API<ITEM extends IItem> {
 
         return forbiddenAttributes;
     }
+
 }

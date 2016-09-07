@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,20 +31,16 @@ import org.bonitasoft.console.common.server.utils.BPMEngineAPIUtil;
 import org.bonitasoft.console.common.server.utils.BPMEngineException;
 import org.bonitasoft.console.common.server.utils.BPMExpressionEvaluationException;
 import org.bonitasoft.console.common.server.utils.DocumentUtil;
+import org.bonitasoft.console.common.server.utils.BonitaHomeFolderAccessor;
 import org.bonitasoft.engine.api.ProcessAPI;
-import org.bonitasoft.engine.api.TenantAPIAccessor;
 import org.bonitasoft.engine.bpm.document.Document;
-import org.bonitasoft.engine.bpm.document.DocumentAttachmentException;
 import org.bonitasoft.engine.bpm.document.DocumentNotFoundException;
 import org.bonitasoft.engine.bpm.document.DocumentValue;
-import org.bonitasoft.engine.bpm.process.ProcessInstanceNotFoundException;
 import org.bonitasoft.engine.session.APISession;
 import org.bonitasoft.engine.session.InvalidSessionException;
 import org.bonitasoft.forms.client.model.DataFieldDefinition;
 import org.bonitasoft.forms.client.model.Expression;
-import org.bonitasoft.forms.client.model.FormAction;
 import org.bonitasoft.forms.client.model.FormFieldValue;
-import org.bonitasoft.forms.client.model.InitialAttachment;
 import org.bonitasoft.forms.server.accessor.DefaultFormsPropertiesFactory;
 import org.bonitasoft.forms.server.accessor.api.EngineClientFactory;
 import org.bonitasoft.forms.server.accessor.api.ExpressionEvaluatorEngineClient;
@@ -58,9 +53,9 @@ import org.bonitasoft.forms.server.exception.FileTooBigException;
 /**
  * Implementation of {@link IFormExpressionsAPI} allowing groovy
  * expressions evaluation and execution
- * 
+ *
  * @author Anthony Birembaut, Zhiheng Yang
- * 
+ *
  */
 public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
@@ -83,7 +78,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * evaluate an initial value expression (at form construction)
-     * 
+     *
      * @param activityInstanceID
      *            the activity instance ID
      * @param expression
@@ -95,7 +90,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      * @return The result of the evaluation
      * @throws BPMExpressionEvaluationException
      *             , InvalidSessionException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Serializable evaluateActivityInitialExpression(final APISession session, final long activityInstanceID, final Expression expression,
@@ -105,7 +100,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * evaluate an initial value expression (at form construction)
-     * 
+     *
      * @param activityInstanceID
      *            the activity instance ID
      * @param expression
@@ -119,7 +114,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      * @return The result of the evaluation
      * @throws BPMExpressionEvaluationException
      *             , InvalidSessionException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Serializable evaluateActivityInitialExpression(final APISession session, final long activityInstanceID, final Expression expression,
@@ -151,7 +146,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * evaluate an initial value expression (at form construction)
-     * 
+     *
      * @param processInstanceID
      *            the process instance ID
      * @param expression
@@ -170,7 +165,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * evaluate an initial value expression (at form construction)
-     * 
+     *
      * @param processInstanceId
      *            the process instance ID
      * @param expression
@@ -212,7 +207,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * evaluate an initial value expression (at form construction)
-     * 
+     *
      * @param processDefinitionID
      *            the process definition ID
      * @param expression
@@ -231,7 +226,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * evaluate an initial value expression (at form construction)
-     * 
+     *
      * @param processDefinitionID
      *            the process definition ID
      * @param expression
@@ -243,7 +238,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      * @return The result of the evaluation
      * @throws BPMExpressionEvaluationException
      *             , InvalidSessionException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Serializable evaluateProcessInitialExpression(final APISession session, final long processDefinitionID, final Expression expression,
@@ -267,7 +262,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate a field value
-     * 
+     *
      * @param session
      * @param fieldId
      *            the field ID
@@ -277,7 +272,6 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      * @return the value of the field as an Serializable
      * @throws FileTooBigException
      * @throws IOException
-     * @throws BPMExpressionEvaluationException
      * @throws InvalidSessionException
      */
     protected Serializable evaluateFieldValueActionExpression(final APISession session, final String fieldId, final Map<String, FormFieldValue> fieldValues,
@@ -298,14 +292,13 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Get the content of the document
-     * 
+     *
      * @param session
      * @param fieldValue
      * @param deleteDocument
-     * @return
+     * @return the document value
      * @throws FileTooBigException
      * @throws IOException
-     * @throws BPMExpressionEvaluationException
      * @throws InvalidSessionException
      */
     protected DocumentValue getDocumentValue(final APISession session, final FormFieldValue fieldValue, final boolean deleteDocument)
@@ -313,61 +306,113 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
         DocumentValue documentValue = null;
         final String uri = (String) fieldValue.getValue();
         if (File.class.getName().equals(fieldValue.getValueType())) {
-            if (uri != null && uri.length() != 0) {
-                final File theSourceFile = new File(uri);
-                if (theSourceFile.exists()) {
-                    final long maxSize = DefaultFormsPropertiesFactory.getDefaultFormProperties(session.getTenantId()).getAttachmentMaxSize();
-                    if (theSourceFile.length() > maxSize * 1048576) {
-                        final String errorMessage = "file " + uri + " too big !";
-                        if (LOGGER.isLoggable(Level.SEVERE)) {
-                            LOGGER.log(Level.SEVERE, errorMessage);
-                        }
-                        throw new FileTooBigException(errorMessage, uri, String.valueOf(maxSize));
-                    }
-                    final byte[] fileContent = DocumentUtil.getArrayByteFromFile(theSourceFile);
-                    final String originalFileName = fieldValue.getDisplayedValue();
-                    final FileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
-                    final String contentType = mimetypesFileTypeMap.getContentType(theSourceFile);
-                    documentValue = new DocumentValue(fileContent, contentType, originalFileName);
-                    if (deleteDocument) {
-                        theSourceFile.delete();
-                    }
-                } else {
-                    if (LOGGER.isLoggable(Level.SEVERE)) {
-                        LOGGER.log(Level.SEVERE, "Error while retrieving the uploaded file " + uri + ": File not found.");
-                    }
-                }
-            } else if (fieldValue.getDocumentId() != -1 && fieldValue.getDisplayedValue() != null) {
-                final ProcessAPI processAPI = bpmEngineAPIUtil.getProcessAPI(session);
-                try {
-                    final Document document = processAPI.getDocument(fieldValue.getDocumentId());
-                    if (document != null) {
-                        if (document.hasContent()) {
-                            documentValue = new DocumentValue(processAPI.getDocumentContent(document.getContentStorageId()), document.getContentMimeType(),
-                                    document.getContentFileName());
-                        } else {
-                            documentValue = new DocumentValue(document.getUrl());
-                        }
-                    } else {
-                        if (LOGGER.isLoggable(Level.FINE)) {
-                            LOGGER.log(Level.FINE, "The document with ID " + fieldValue.getDocumentId() + " is null.");
-                        }
-                    }
-                } catch (final DocumentNotFoundException e) {
-                    if (LOGGER.isLoggable(Level.SEVERE)) {
-                        LOGGER.log(Level.SEVERE, "Error while retrieving the document with ID " + fieldValue.getDocumentId() + ": Document not found.");
-                    }
-                }
-            }
+            // File widget is selected
+            documentValue = getFileDocumentValue(session, fieldValue, deleteDocument, uri);
         } else {
-            documentValue = new DocumentValue(uri);
+            // Url type file widget is selected
+            documentValue = getURLDocumentValue(session, fieldValue, uri);
+        }
+        //set the document ID if the widget was already displaying a document value
+        if (documentValue != null && fieldValue.getDocumentId() != -1) {
+            documentValue.setDocumentId(fieldValue.getDocumentId());
         }
         return documentValue;
     }
 
+    protected DocumentValue getURLDocumentValue(final APISession session, final FormFieldValue fieldValue, final String uri)
+            throws BPMEngineException {
+        DocumentValue documentValue = null;
+
+        final Document document = getCurrentDocumentValue(session, fieldValue);
+        if (document != null) {
+            if (uri == null && document.getUrl() != null || uri != null && !uri.equals(document.getUrl())) {
+                // the url has changed or the document was a file type
+                documentValue = new DocumentValue(uri);
+                documentValue.setHasChanged(true);
+            } else {
+                // file widget content has not changed
+                documentValue = new DocumentValue(null);
+                documentValue.setHasChanged(false);
+            }
+        } else {
+            documentValue = new DocumentValue(uri);
+            documentValue.setHasChanged(true);
+        }
+        return documentValue;
+    }
+
+    protected Document getCurrentDocumentValue(final APISession session, final FormFieldValue fieldValue) throws BPMEngineException {
+        Document document = null;
+        if (fieldValue.getDocumentId() != -1) {
+            // A document was displayed in the widget
+            final ProcessAPI processAPI = bpmEngineAPIUtil.getProcessAPI(session);
+            try {
+                document = processAPI.getDocument(fieldValue.getDocumentId());
+            } catch (final DocumentNotFoundException e) {
+                if (LOGGER.isLoggable(Level.SEVERE)) {
+                    LOGGER.log(Level.SEVERE, "Error while retrieving the document with ID " + fieldValue.getDocumentId() + ": Document not found.");
+                }
+            }
+        }
+        return document;
+    }
+
+    protected DocumentValue getFileDocumentValue(final APISession session, final FormFieldValue fieldValue, final boolean deleteDocument, final String uri)
+            throws FileTooBigException, IOException {
+        DocumentValue documentValue = null;
+        if (uri != null && uri.length() != 0) {
+            // A new file widget content has been set
+            documentValue = getNewFileDocumentValue(session, fieldValue, deleteDocument, uri);
+        } else if (fieldValue.getDocumentId() != -1 && fieldValue.getDisplayedValue() != null) {
+            // file widget content has not changed
+            documentValue = new DocumentValue(null);
+            documentValue.setHasChanged(false);
+        }
+        return documentValue;
+    }
+
+    protected BonitaHomeFolderAccessor getTenantFolder() {
+        return new BonitaHomeFolderAccessor();
+    }
+
+    protected DocumentValue getNewFileDocumentValue(final APISession session, final FormFieldValue fieldValue, final boolean deleteDocument, final String uri)
+            throws FileTooBigException, IOException {
+        DocumentValue documentValue = null;
+
+        final File theSourceFile = getTenantFolder().getTempFile(uri, session.getTenantId());
+        if (theSourceFile.exists()) {
+            final long maxSize = getDocumentMaxSize(session);
+            if (theSourceFile.length() > maxSize * 1048576) {
+                final String errorMessage = "file " + uri + " too big !";
+                if (LOGGER.isLoggable(Level.SEVERE)) {
+                    LOGGER.log(Level.SEVERE, errorMessage);
+                }
+                throw new FileTooBigException(errorMessage, uri, String.valueOf(maxSize));
+            }
+            final byte[] fileContent = DocumentUtil.getArrayByteFromFile(theSourceFile);
+            final String originalFileName = fieldValue.getDisplayedValue();
+            final FileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
+            final String contentType = mimetypesFileTypeMap.getContentType(theSourceFile);
+            documentValue = new DocumentValue(fileContent, contentType, originalFileName);
+            documentValue.setHasChanged(true);
+            if (deleteDocument) {
+                theSourceFile.delete();
+            }
+        } else {
+            if (LOGGER.isLoggable(Level.SEVERE)) {
+                LOGGER.log(Level.SEVERE, "Error while retrieving the uploaded file " + uri + ": File not found.");
+            }
+        }
+        return documentValue;
+    }
+
+    protected long getDocumentMaxSize(final APISession session) {
+        return DefaultFormsPropertiesFactory.getDefaultFormProperties(session.getTenantId()).getAttachmentMaxSize();
+    }
+
     /**
      * Generate the form fields context for a groovy evaluation
-     * 
+     *
      * @param session
      * @param fieldValues
      * @param locale
@@ -375,7 +420,6 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      * @return the context
      * @throws IOException
      * @throws FileTooBigException
-     * @throws BPMExpressionEvaluationException
      * @throws InvalidSessionException
      */
     @Override
@@ -396,7 +440,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form submission)
-     * 
+     *
      * @param activityInstanceID
      *            the activity instance ID
      * @param expression
@@ -412,7 +456,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      *             , InvalidSessionException
      * @throws IOException
      * @throws FileTooBigException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Serializable evaluateActivityExpression(final APISession session, final long activityInstanceID, final Expression expression,
@@ -423,7 +467,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form submission)
-     * 
+     *
      * @param activityInstanceID
      *            the activity instance ID
      * @param expression
@@ -441,12 +485,12 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      *             , InvalidSessionException
      * @throws IOException
      * @throws FileTooBigException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Serializable evaluateActivityExpression(final APISession session, final long activityInstanceID, final Expression expression,
             final Map<String, FormFieldValue> fieldValues, final Locale locale, final boolean isCurrentValue, final Map<String, Serializable> context)
-            throws BPMExpressionEvaluationException, InvalidSessionException, FileTooBigException, IOException, BPMEngineException {
+                    throws BPMExpressionEvaluationException, InvalidSessionException, FileTooBigException, IOException, BPMEngineException {
         Serializable result = null;
         if (expression != null) {
             final Map<String, Serializable> evalContext = generateGroovyContext(session, fieldValues, locale, context, false);
@@ -474,7 +518,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form submission)
-     * 
+     *
      * @param processInstanceID
      *            the process instance ID
      * @param expression
@@ -500,7 +544,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form submission)
-     * 
+     *
      * @param processInstanceId
      *            the process instance ID
      * @param expression
@@ -522,7 +566,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
     @Override
     public Serializable evaluateInstanceExpression(final APISession session, final long processInstanceId, final Expression expression,
             final Map<String, FormFieldValue> fieldValues, final Locale locale, final boolean isCurrentValue, final Map<String, Serializable> context)
-            throws BPMEngineException, InvalidSessionException, FileTooBigException, IOException, BPMExpressionEvaluationException {
+                    throws BPMEngineException, InvalidSessionException, FileTooBigException, IOException, BPMExpressionEvaluationException {
         Serializable result = null;
         if (expression != null) {
             final Map<String, Serializable> evalContext = generateGroovyContext(session, fieldValues, locale, context, false);
@@ -543,7 +587,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an action expression (at form submission)
-     * 
+     *
      * @param processDefinitionID
      *            the process definition ID
      * @param expression
@@ -557,7 +601,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      *             , InvalidSessionException
      * @throws IOException
      * @throws FileTooBigException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Serializable evaluateProcessExpression(final APISession session, final long processDefinitionID, final Expression expression,
@@ -568,7 +612,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an action expression (at form submission)
-     * 
+     *
      * @param processDefinitionID
      *            the process definition ID
      * @param expression
@@ -584,7 +628,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      *             , InvalidSessionException
      * @throws IOException
      * @throws FileTooBigException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Serializable evaluateProcessExpression(final APISession session, final long processDefinitionID, final Expression expression,
@@ -611,7 +655,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Get the right object value according to the datafield definition
-     * 
+     *
      * @param value
      *            the value as extracted from the {@link FormFieldValue} object
      * @param dataTypeClassName
@@ -646,139 +690,8 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
     }
 
     /**
-     * Perform a set attachment action
-     * 
-     * @param processInstanceID
-     * @param attachments
-     * @param action
-     * @param fieldValues
-     * @param locale
-     * @param setAttachment
-     * @throws FileTooBigException
-     * 
-     *             FIXME depending on the engine document data support
-     */
-    @Override
-    public void performSetAttachmentAction(final APISession session, final long processInstanceID,
-            final Set<org.bonitasoft.forms.client.model.InitialAttachment> attachments, final FormAction action, final Map<String, FormFieldValue> fieldValues,
-            final Locale locale, final boolean setAttachment) throws FileTooBigException {
-        String filePath = null;
-        try {
-            final String fieldId = action.getExpression().getContent().substring(FIELDID_PREFIX.length());
-            final FormFieldValue fieldValue = fieldValues.get(fieldId);
-            if (fieldValue != null) {
-                filePath = (String) fieldValue.getValue();
-                if (filePath != null && !filePath.isEmpty()) {
-                    final String attachmentName = fieldId;
-                    performSetAttachmentAction(session, processInstanceID, attachments, attachmentName, filePath, setAttachment);
-                } else {
-                    if (LOGGER.isLoggable(Level.WARNING)) {
-                        LOGGER.log(Level.WARNING,
-                                "The attachment to set should be either a String or a groovy expression returning a String which is not the case of value : "
-                                        + action.getVariableName());
-                    }
-                }
-            } else {
-                if (LOGGER.isLoggable(Level.WARNING)) {
-                    LOGGER.log(Level.WARNING, "Error while setting the attachment. Unable to find a field with ID " + fieldId + " in the form.");
-                }
-            }
-        } catch (final IndexOutOfBoundsException e) {
-            if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.log(Level.WARNING, "Invalid action expression : " + action.getExpression().getName());
-            }
-        }
-
-    }
-
-    /**
-     * {@inheritDoc}
-     * 
-     * FIXME depending on the engine document data support
-     */
-    @Override
-    public void performSetAttachmentAction(final APISession session, final long processInstanceID, final Set<InitialAttachment> attachments,
-            String attachmentName, final String fileName, final boolean setAttachment) throws FileTooBigException {
-
-        try {
-            final ProcessAPI processAPI = TenantAPIAccessor.getProcessAPI(session);
-            if (fileName != null && fileName.length() != 0) {
-                final File theSourceFile = new File(fileName);
-                if (theSourceFile.exists()) {
-                    final long maxSize = DefaultFormsPropertiesFactory.getDefaultFormProperties(session.getTenantId()).getAttachmentMaxSize();
-                    if (theSourceFile.length() > maxSize * 1048576) {
-                        final String errorMessage = "file " + fileName + " too big !";
-                        if (LOGGER.isLoggable(Level.SEVERE)) {
-                            LOGGER.log(Level.SEVERE, errorMessage);
-                        }
-                        throw new FileTooBigException(errorMessage, fileName, String.valueOf(maxSize));
-                    }
-                    final byte[] fileContent = DocumentUtil.getArrayByteFromFile(theSourceFile);
-                    final String originalFileName = theSourceFile.getName();
-                    final FileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
-                    final String contentType = mimetypesFileTypeMap.getContentType(theSourceFile);
-                    // theSourceFile.delete();
-                    if (attachmentName == null) {
-                        attachmentName = "";
-                    }
-                    if (processInstanceID != -1 && setAttachment) {
-                        processAPI.attachDocument(processInstanceID, attachmentName, originalFileName, contentType, fileContent);
-                    } /*
-                       * else {
-                       * final InitialAttachment initialAttachment = new InitialAttachment();
-                       * initialAttachment.setName(attachmentName);
-                       * final Map<String, String> metadata = new HashMap<String, String>();
-                       * metadata.put("content-type", contentType);
-                       * initialAttachment.setFileName(originalFileName);
-                       * initialAttachment.setMetaData(metadata);
-                       * initialAttachment.setContent(fileContent);
-                       * attachments.add(initialAttachment);
-                       * }
-                       */
-
-                } else {
-                    if (LOGGER.isLoggable(Level.FINE)) {
-                        LOGGER.log(Level.FINE, "The file " + fileName + " does not exist. skipping the attachment creation/update.");
-                    }
-                }
-            } else {
-                final InitialAttachment initialAttachment = new InitialAttachment();
-                initialAttachment.setName(attachmentName);
-                attachments.add(initialAttachment);
-            }
-        } catch (final InvalidSessionException e) {
-            if (LOGGER.isLoggable(Level.INFO)) {
-                LOGGER.log(Level.INFO, "Session timeout");
-            }
-        } catch (final IOException e) {
-            if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.log(Level.WARNING, "can't get the file content in the location: " + fileName);
-            }
-        } catch (final ProcessInstanceNotFoundException e) {
-            if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.log(Level.WARNING, "Process instance " + processInstanceID + " not found.");
-            }
-        } catch (final DocumentAttachmentException e) {
-            if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.log(Level.WARNING, "Error while setting the attachment.");
-            }
-        } catch (final FileTooBigException e) {
-            if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.log(Level.WARNING, "Error while setting the attachment: file too big!");
-            }
-            throw e;
-        } catch (final Exception e) {
-            if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.log(Level.WARNING, "Error while setting the attachment.");
-            }
-
-        }
-
-    }
-
-    /**
      * evaluate an initial value expression (at form construction)
-     * 
+     *
      * @param activityInstanceID
      *            the activity instance ID
      * @param expressions
@@ -792,12 +705,12 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      * @return The result of the evaluations as a Map
      * @throws BPMExpressionEvaluationException
      *             , InvalidSessionException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Map<String, Serializable> evaluateActivityInitialExpressions(final APISession session, final long activityInstanceID,
             final List<Expression> expressions, final Locale locale, final boolean isCurrentValue, final Map<String, Serializable> context)
-            throws BPMExpressionEvaluationException, InvalidSessionException, BPMEngineException {
+                    throws BPMExpressionEvaluationException, InvalidSessionException, BPMEngineException {
 
         final Map<String, Serializable> result = new HashMap<String, Serializable>();
         context.put(IFormExpressionsAPI.USER_LOCALE, locale);
@@ -829,7 +742,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form submission)
-     * 
+     *
      * @param activityInstanceID
      *            the activity instance ID
      * @param expressions
@@ -847,12 +760,12 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      *             , InvalidSessionException
      * @throws IOException
      * @throws FileTooBigException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Map<String, Serializable> evaluateActivityExpressions(final APISession session, final long activityInstanceID, final List<Expression> expressions,
             final Map<String, FormFieldValue> fieldValues, final Locale locale, final boolean isCurrentValue, Map<String, Serializable> context)
-            throws BPMExpressionEvaluationException, InvalidSessionException, FileTooBigException, IOException, BPMEngineException {
+                    throws BPMExpressionEvaluationException, InvalidSessionException, FileTooBigException, IOException, BPMEngineException {
 
         final Map<String, Serializable> result = new HashMap<String, Serializable>();
         context.put(IFormExpressionsAPI.USER_LOCALE, locale);
@@ -887,7 +800,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form construction)
-     * 
+     *
      * @param processInstanceId
      *            the process instance ID
      * @param expressions
@@ -905,7 +818,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
     @Override
     public Map<String, Serializable> evaluateInstanceInitialExpressions(final APISession session, final long processInstanceId,
             final List<Expression> expressions, final Locale locale, final boolean isCurrentValue, final Map<String, Serializable> context)
-            throws BPMEngineException, InvalidSessionException, BPMExpressionEvaluationException {
+                    throws BPMEngineException, InvalidSessionException, BPMExpressionEvaluationException {
 
         final Map<String, Serializable> result = new HashMap<String, Serializable>();
         context.put(IFormExpressionsAPI.USER_LOCALE, locale);
@@ -947,7 +860,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form submission)
-     * 
+     *
      * @param processInstanceId
      *            the process instance ID
      * @param expressions
@@ -969,7 +882,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
     @Override
     public Map<String, Serializable> evaluateInstanceExpressions(final APISession session, final long processInstanceId, final List<Expression> expressions,
             final Map<String, FormFieldValue> fieldValues, final Locale locale, final boolean isCurrentValue, Map<String, Serializable> context)
-            throws BPMEngineException, InvalidSessionException, FileTooBigException, IOException, BPMExpressionEvaluationException {
+                    throws BPMEngineException, InvalidSessionException, FileTooBigException, IOException, BPMExpressionEvaluationException {
 
         final Map<String, Serializable> result = new HashMap<String, Serializable>();
         context.put(IFormExpressionsAPI.USER_LOCALE, locale);
@@ -997,7 +910,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form construction)
-     * 
+     *
      * @param processDefinitionID
      *            the process definition ID
      * @param expressions
@@ -1009,7 +922,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      * @return The result of the evaluations as a Map
      * @throws BPMExpressionEvaluationException
      *             , InvalidSessionException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Map<String, Serializable> evaluateProcessInitialExpressions(final APISession session, final long processDefinitionID,
@@ -1041,7 +954,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
 
     /**
      * Evaluate an expression (at form submission)
-     * 
+     *
      * @param processDefinitionID
      *            the process definition ID
      * @param expressions
@@ -1057,7 +970,7 @@ public class FormExpressionsAPIImpl implements IFormExpressionsAPI {
      *             , InvalidSessionException
      * @throws IOException
      * @throws FileTooBigException
-     * @throws BPMEngineException 
+     * @throws BPMEngineException
      */
     @Override
     public Map<String, Serializable> evaluateProcessExpressions(final APISession session, final long processDefinitionID, final List<Expression> expressions,

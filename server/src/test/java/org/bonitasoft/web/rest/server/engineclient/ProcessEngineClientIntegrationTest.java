@@ -60,11 +60,12 @@ public class ProcessEngineClientIntegrationTest extends AbstractConsoleTest {
 
     @Test
     public void testCountResolvedProcesses() throws Exception {
+        final long before = processEngineClient.countResolvedProcesses();
         create2resolvedProcesses();
 
         final long resolvedProcesses = processEngineClient.countResolvedProcesses();
 
-        assertEquals(2L, resolvedProcesses);
+        assertEquals(2L, resolvedProcesses - before);
     }
 
     private void create2resolvedProcesses() {
@@ -79,6 +80,7 @@ public class ProcessEngineClientIntegrationTest extends AbstractConsoleTest {
         processEngineClient.deleteDisabledProcesses(asList(deployedProcess.getId()));
 
         assertNull(getProcessDefinition(deployedProcess.getId()));
+        TestProcessFactory.getInstance().remove(deployedProcess);
     }
 
     @Test

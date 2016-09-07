@@ -1,16 +1,14 @@
 /**
- * Copyright (C) 2011 BonitaSoft S.A.
+ * Copyright (C) 2011, 2014 BonitaSoft S.A.
  * BonitaSoft, 32 rue Gustave Eiffel - 38000 Grenoble
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -25,15 +23,14 @@ import org.bonitasoft.web.toolkit.client.data.item.IItem;
 import org.bonitasoft.web.toolkit.client.data.item.Item;
 import org.bonitasoft.web.toolkit.client.data.item.ItemDefinition;
 import org.bonitasoft.web.toolkit.client.data.item.template.ItemHasDualName;
-import org.bonitasoft.web.toolkit.client.data.item.template.ItemHasIcon;
 import org.bonitasoft.web.toolkit.client.data.item.template.ItemHasLastUpdateDate;
 import org.bonitasoft.web.toolkit.client.data.item.template.ItemHasUniqueId;
 
 /**
  * @author Vincent Elcrin
- *
+ * @author Celine Souchet
  */
-public class ProcessItem extends Item implements ItemHasUniqueId, ItemHasLastUpdateDate, ItemHasIcon, ItemHasDualName {
+public class ProcessItem extends Item implements ItemHasUniqueId, ItemHasLastUpdateDate, ItemHasDualName {
 
     public ProcessItem() {
         super();
@@ -89,9 +86,15 @@ public class ProcessItem extends Item implements ItemHasUniqueId, ItemHasLastUpd
 
     public static final String FILTER_CATEGORY_ID = "categoryId";
 
+    public static final String FILTER_FOR_PENDING_OR_ASSIGNED_TASKS = "forPendingOrAssignedTask";
+
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // COUNTERS
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public static final String COUNTER_FAILED_CASES = "failedCases";
+
+    public static final String COUNTER_OPEN_CASES = "openCases";
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // GETTERS AND SETTERS
@@ -109,7 +112,7 @@ public class ProcessItem extends Item implements ItemHasUniqueId, ItemHasLastUpd
     }
 
     public String ensureName() {
-        if(StringUtil.isBlank(getDisplayName())) {
+        if (StringUtil.isBlank(getDisplayName())) {
             return getName();
         }
         return getDisplayName();
@@ -145,11 +148,6 @@ public class ProcessItem extends Item implements ItemHasUniqueId, ItemHasLastUpd
     }
 
     @Override
-    public String getIcon() {
-        return this.getAttributeValue(ATTRIBUTE_ICON);
-    }
-
-    @Override
     public Date getLastUpdateDate() {
         return this.getAttributeValueAsDate(ATTRIBUTE_LAST_UPDATE_DATE);
     }
@@ -157,7 +155,6 @@ public class ProcessItem extends Item implements ItemHasUniqueId, ItemHasLastUpd
     public String getActorInitiatorId() {
         return this.getAttributeValue(ATTRIBUTE_ACTOR_INITIATOR_ID);
     }
-
 
     // SETTERS
 
@@ -219,11 +216,6 @@ public class ProcessItem extends Item implements ItemHasUniqueId, ItemHasLastUpd
 
     public void setDisplayDescription(final String displayDescription) {
         this.setAttribute(ATTRIBUTE_DISPLAY_DESCRIPTION, displayDescription);
-    }
-
-    @Override
-    public void setIcon(final String iconPath) {
-        this.setAttribute(ATTRIBUTE_ICON, iconPath);
     }
 
     @Override

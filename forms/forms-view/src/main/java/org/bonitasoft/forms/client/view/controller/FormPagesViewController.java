@@ -23,10 +23,12 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.bonitasoft.forms.client.i18n.FormsResourceBundle;
 import org.bonitasoft.forms.client.model.FormFieldValue;
@@ -63,12 +65,12 @@ import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.http.client.Request;
 import com.google.gwt.http.client.RequestBuilder;
 import com.google.gwt.http.client.RequestCallback;
+import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Element;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Frame;
 import com.google.gwt.user.client.ui.HTMLPanel;
@@ -78,7 +80,7 @@ import com.google.gwt.user.client.ui.Widget;
 
 /**
  * Pages view controller (handles the page flow for processes or tasks)
- * 
+ *
  * @author Anthony Birembaut
  */
 public class FormPagesViewController {
@@ -154,7 +156,7 @@ public class FormPagesViewController {
     /**
      * Map of form fields already displayed in the page flow
      */
-    protected Map<String, FormFieldWidget> fieldWidgets = new HashMap<String, FormFieldWidget>();
+    protected Map<String, FormFieldWidget> fieldWidgets = new TreeMap<String, FormFieldWidget>();
 
     /**
      * Map of form buttons already displayed in the page flow
@@ -218,6 +220,20 @@ public class FormPagesViewController {
     protected Map<String, Object> urlContext;
 
     /**
+     * Widget type to focused when loading is hidden
+     *
+     */
+    protected List<WidgetType> widgetTypesToFocus = Arrays.asList(
+            WidgetType.TEXTAREA,
+            WidgetType.TEXTBOX,
+            WidgetType.SUGGESTBOX,
+            WidgetType.RICH_TEXTAREA,
+            WidgetType.SUGGESTBOX_ASYNC,
+            WidgetType.PASSWORD,
+            WidgetType.FILEUPLOAD
+            );
+
+    /**
      * Constructor
      */
     public FormPagesViewController(final String formID, final Map<String, Object> contextMap, final ReducedFormPage firstPage,
@@ -237,7 +253,7 @@ public class FormPagesViewController {
 
     /**
      * Display the page at the given index
-     * 
+     *
      * @param newIndex
      *            index of the page in the page list
      */
@@ -312,8 +328,8 @@ public class FormPagesViewController {
                     }
                 });
                 theRequestBuilder.send();
-            } catch (final Exception e) {
-                Window.alert("Error while trying to query the form layout :" + e.getMessage());
+            } catch (final RequestException e) {
+                GWT.log("Error while trying to query the form layout :" + e.getMessage());
             }
 
         }
@@ -349,7 +365,7 @@ public class FormPagesViewController {
 
     /**
      * Build the page (template + form fields)
-     * 
+     *
      * @param formPage
      *            the page definition
      * @param hasAlreadyBeenDisplayed
@@ -393,13 +409,38 @@ public class FormPagesViewController {
             buildViewMode(pageHTMLPanel, formPage, hasAlreadyBeenDisplayed, isNextPage, onloadAttributeValue);
         }
         domUtils.overrideBrowserNativeInputs();
+        resizeFrame();
         domUtils.hideLoading();
+        focusFirstField();
 
     }
 
     /**
+     * Focus the first field "focusable"
+     */
+    protected void focusFirstField() {
+        final Iterator<Entry<String, FormFieldWidget>> fieldWidgestIterator = fieldWidgets.entrySet().iterator();
+
+        boolean focused = false;
+        while (fieldWidgestIterator.hasNext() && !focused) {
+            final Entry<String, FormFieldWidget> reducedFormWidget = fieldWidgestIterator.next();
+            final FormFieldWidget formFieldWidget = reducedFormWidget.getValue();
+            if (formFieldWidget != null && widgetTypesToFocus.contains(formFieldWidget.getType())) {
+                if (formFieldWidget.getType().equals(WidgetType.RICH_TEXTAREA)) {
+                    formFieldWidget.getElement().focus();
+                } else {
+                    formFieldWidget.setFocusOn();
+                }
+                focused = true;
+            }
+        }
+
+    }
+
+
+    /**
      * Insert the widgets in the page for the view mode
-     * 
+     *
      * @param pageHTMLPanel
      *            the HTMLPanel
      * @param formPage
@@ -486,7 +527,7 @@ public class FormPagesViewController {
 
     /**
      * Insert the widgets in the page for the edit mode
-     * 
+     *
      * @param pageHTMLPanel
      *            the HTMLPanel
      * @param formPage
@@ -575,7 +616,7 @@ public class FormPagesViewController {
 
     /**
      * Check if the value of the field should be retrieved from the history or recalculated
-     * 
+     *
      * @param hasAlreadyBeenDisplayed
      *            indicates whether the page has already been displayed or not
      * @param isNextPage
@@ -594,7 +635,7 @@ public class FormPagesViewController {
 
     /**
      * Insert the widget in the page
-     * 
+     *
      * @param pageHTMLPanel
      *            the HTMLPanel
      * @param formWidgetData
@@ -617,14 +658,14 @@ public class FormPagesViewController {
                 pageHTMLPanel.add(widget, widgetParentElement);
                 widgetParentElement.addClassName(widgetStyle);
             } else {
-                Window.alert("An element with id " + formWidgetData.getId() + " is missing from the page template.");
+                GWT.log("An element with id " + formWidgetData.getId() + " is missing from the page template.");
             }
         }
     }
 
     /**
      * Check in the URL if the initial value of the field is specified and override it
-     * 
+     *
      * @param formWidgetData
      *            the widget data
      * @param widgetId
@@ -678,7 +719,7 @@ public class FormPagesViewController {
 
     /**
      * Set a button's label and title
-     * 
+     *
      * @param formWidgetData
      */
     protected void setButtonLabel(final ReducedFormWidget formWidgetData) {
@@ -703,7 +744,7 @@ public class FormPagesViewController {
 
     /**
      * Associate a button with the correct click handler
-     * 
+     *
      * @param formButtonWidget
      * @param isEditMode
      */
@@ -830,7 +871,7 @@ public class FormPagesViewController {
 
     /**
      * Disable a button
-     * 
+     *
      * @param button
      *            the button to disable
      */
@@ -844,7 +885,7 @@ public class FormPagesViewController {
 
     /**
      * disable the buttons
-     * 
+     *
      * @param pressedButton
      *            the button that was pressed
      */
@@ -864,7 +905,7 @@ public class FormPagesViewController {
 
     /**
      * Enable a button
-     * 
+     *
      * @param button
      *            to enable
      */
@@ -880,7 +921,7 @@ public class FormPagesViewController {
 
     /**
      * Enable the buttons
-     * 
+     *
      * @param hideLoader
      *            boolean to specify if we had need to hide the loader
      */
@@ -893,12 +934,13 @@ public class FormPagesViewController {
         }
         if (hideLoader) {
             domUtils.hideLoading();
+            focusFirstField();
         }
     }
 
     /**
      * Records a page's fields
-     * 
+     *
      * @param formWidgets
      *            the list of form widgets
      */
@@ -915,7 +957,7 @@ public class FormPagesViewController {
 
     /**
      * Records a page's fields and validate it
-     * 
+     *
      * @param actionAfterValidation
      *            type of action to execute after the validation step
      */
@@ -934,7 +976,12 @@ public class FormPagesViewController {
 
         final List<ReducedFormValidator> pageValidators = formPage.getPageValidators();
 
-        final String submitButtonId = pressedButton.getElement().getParentElement().getParentElement().getId();
+        final String submitButtonId = getSubmitButtonID();
+
+        //always clean page validators
+        if (!pageValidators.isEmpty()) {
+            cleanValidatorsMessages(pageValidators);
+        }
 
         // fields validation
         if (!formWidgetsToValidate.isEmpty()) {
@@ -950,7 +997,6 @@ public class FormPagesViewController {
                     actionAfterValidation, formPage.getPageValidators(), formPage.getPageValidatorsId()));
         } else if (isCurrentPageValid) {
             if (!pageValidators.isEmpty()) {
-                cleanValidatorsMessages(pageValidators);
                 formsServiceAsync.validateFormPage(formID, urlContext, formPage.getPageValidatorsId(), widgetValues, submitButtonId,
                         new FormPageValidatorHandler(actionAfterValidation));
             } else {
@@ -963,7 +1009,7 @@ public class FormPagesViewController {
 
     /**
      * Validate the compliance of a list of widgets with their mandatory attributes
-     * 
+     *
      * @param formWidgets
      */
     protected void validateMandatoryFieldWidgets(final List<ReducedFormWidget> formWidgets) {
@@ -977,7 +1023,7 @@ public class FormPagesViewController {
 
     /**
      * Validate the compliance of a widget with its mandatory attribute
-     * 
+     *
      * @param mandatoryFieldWidget
      */
     protected void validateMandatoryField(final FormFieldWidget mandatoryFieldWidget) {
@@ -1032,7 +1078,7 @@ public class FormPagesViewController {
 
     /**
      * Get the form field widgets to validate
-     * 
+     *
      * @param formWidgets
      * @return the {@link List} of {@link FormWidget} to validate
      */
@@ -1053,7 +1099,7 @@ public class FormPagesViewController {
 
     /**
      * Remove the validation messages of the given validators from the page
-     * 
+     *
      * @param validators
      */
     protected void cleanValidatorsMessages(final List<ReducedFormValidator> validators) {
@@ -1068,7 +1114,7 @@ public class FormPagesViewController {
 
     protected void submitForm(final ACTION_TYPE actionAfterValidation) {
         if (actionAfterValidation.equals(ACTION_TYPE.SUBMIT)) {
-            final String submitButtonId = pressedButton.getElement().getParentElement().getParentElement().getId();
+            final String submitButtonId = getSubmitButtonID();
             formsServiceAsync.executeActions(formID, urlContext, widgetValues, followedPagesIds, submitButtonId, new FormSubmissionHandler());
         } else {
             int newIndex = currentPageIndex;
@@ -1091,6 +1137,10 @@ public class FormPagesViewController {
                 }
             }
         }
+    }
+
+    protected String getSubmitButtonID() {
+        return pressedButton.getElement().getParentElement().getParentElement().getId();
     }
 
     /**
@@ -1134,7 +1184,7 @@ public class FormPagesViewController {
                         if (validatorElement != null) {
                             DOM.appendChild(validatorElement, formValidationMessageWidget.getElement());
                         } else {
-                            Window.alert("An element with id " + validatorId + " is missing from the page template.");
+                            GWT.log("An element with id " + validatorId + " is missing from the page template.");
                         }
                     }
                 }
@@ -1194,7 +1244,7 @@ public class FormPagesViewController {
                     if (RootPanel.get(validatorId) != null) {
                         RootPanel.get(validatorId).add(formValidationMessageWidget);
                     } else {
-                        Window.alert("An element with id " + validatorId + " is missing from the page template.");
+                        GWT.log("An element with id " + validatorId + " is missing from the page template.");
                     }
                 }
                 enableButtons(true);
@@ -1245,14 +1295,26 @@ public class FormPagesViewController {
      */
     protected class FormSubmissionHandler extends FormsAsyncCallback<Map<String, Object>> {
 
+        private final String actionForNotif;
+
+        public FormSubmissionHandler() {
+            super();
+            actionForNotif = domUtils.getActionForNotif(urlContext);
+        }
+
         /**
          * {@inheritDoc}
          */
         @Override
         public void onSuccess(final Map<String, Object> newContext) {
-            urlContext.clear();
-            urlContext.putAll(newContext);
-            redirectToConfirmationPage();
+            if (domUtils.isPageInFrame()) {
+                domUtils.notifyParentFrameSuccess(actionForNotif);
+            }
+            if (!"false".equals(urlUtils.getHashParameter(URLUtils.DISPLAY_CONFIRMATION))) {
+                urlContext.clear();
+                urlContext.putAll(newContext);
+                redirectToConfirmationPage();
+            }
         }
 
         @Override
@@ -1261,52 +1323,56 @@ public class FormPagesViewController {
                 throw caught;
             } catch (final FormAlreadySubmittedException e) {
                 final String errorMessage = FormsResourceBundle.getErrors().formAlreadySubmittedOrCancelledError();
-                formsServiceAsync.getApplicationErrorTemplate(formID, urlContext, new ErrorPageHandler(applicationHTMLPanel, formID, pageHTMLPanel,
+                if (domUtils.isPageInFrame()) {
+                    domUtils.notifyParentFrameError("formAlreadySubmittedOrCancelledError", actionForNotif);
+                }
+                if (!"false".equals(urlUtils.getHashParameter(URLUtils.DISPLAY_CONFIRMATION))) {
+                    formsServiceAsync.getApplicationErrorTemplate(formID, urlContext, new ErrorPageHandler(applicationHTMLPanel, formID, pageHTMLPanel,
                         errorMessage, elementId));
+                }
             } catch (final FileTooBigException e) {
                 final String fileName = e.getFileName();
                 final String maxSize = e.getMaxSize();
+                String errorMessage;
                 if (fileName != null) {
-                    Window.alert(FormsResourceBundle.getErrors().fileTooBigErrorWithNameSize(fileName, maxSize));
+                    errorMessage = FormsResourceBundle.getErrors().fileTooBigErrorWithNameSize(fileName, maxSize);
                 } else {
-                    Window.alert(FormsResourceBundle.getErrors().fileTooBigErrorWithSize(maxSize));
+                    errorMessage = FormsResourceBundle.getErrors().fileTooBigErrorWithSize(maxSize);
+                }
+                if (domUtils.isPageInFrame()) {
+                    domUtils.notifyParentFrameError("fileTooBigError", actionForNotif);
+                }
+                if (!"false".equals(urlUtils.getHashParameter(URLUtils.DISPLAY_CONFIRMATION))) {
+                    Window.alert(errorMessage);
                 }
             } catch (final Throwable t) {
                 final String errorMessage = FormsResourceBundle.getErrors().formSubmissionError();
-                formsServiceAsync.getApplicationErrorTemplate(formID, urlContext, new ErrorPageHandler(applicationHTMLPanel, formID, pageHTMLPanel,
+                if (domUtils.isPageInFrame()) {
+                    domUtils.notifyParentFrameError("formSubmissionError", actionForNotif);
+                }
+                if (!"false".equals(urlUtils.getHashParameter(URLUtils.DISPLAY_CONFIRMATION))) {
+                    formsServiceAsync.getApplicationErrorTemplate(formID, urlContext, new ErrorPageHandler(applicationHTMLPanel, formID, pageHTMLPanel,
                         errorMessage, elementId));
+                }
             }
 
             enableButtons(true);
         }
     }
 
-    protected class GetTokenAsyncCallback implements AsyncCallback<String> {
+     /**
+     * If the page is contained in a form, resize the frame to fit the page height
+     */
+    protected void resizeFrame() {
 
-        protected String url;
-
-        public GetTokenAsyncCallback(final String url) {
-            this.url = url;
-        }
-
-        @Override
-        public void onSuccess(final String temporaryToken) {
-            url += "&" + URLUtils.USER_CREDENTIALS_PARAM + "=" + temporaryToken;
-            if (domUtils.isPageInFrame()) {
-                urlUtils.frameRedirect(DOMUtils.DEFAULT_FORM_ELEMENT_ID, url);
-            } else {
-                urlUtils.windowAssign(url);
+        final Timer timer = new Timer() {
+            @Override
+            public void run() {
+                if (domUtils.isPageInFrame()) {
+               }
             }
-        }
-
-        @Override
-        public void onFailure(final Throwable t) {
-            if (domUtils.isPageInFrame()) {
-                urlUtils.frameRedirect(DOMUtils.DEFAULT_FORM_ELEMENT_ID, url);
-            } else {
-                urlUtils.windowAssign(url);
-            }
-        }
+        };
+        timer.schedule(300);
     }
 
     public void setMandatoryFieldSymbol(final String mandatoryFieldSymbol) {
@@ -1331,7 +1397,7 @@ public class FormPagesViewController {
         } else {
             defaultConfirmationMessage = FormsResourceBundle.getMessages().submissionConfirmationMessage();
         }
-        formsServiceAsync.getFormConfirmationTemplate(formID, urlContext, createConfirmationPageHandler(defaultConfirmationMessage));
+        formsServiceAsync.getFormConfirmationTemplate(formID, urlContext, widgetValues, createConfirmationPageHandler(defaultConfirmationMessage));
     }
 
     private ConfirmationPageHandler createConfirmationPageHandler(final String defaultConfirmationMessage) {

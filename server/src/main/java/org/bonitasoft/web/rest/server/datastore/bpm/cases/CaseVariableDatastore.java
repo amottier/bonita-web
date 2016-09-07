@@ -1,11 +1,19 @@
-/*******************************************************************************
+/**
  * Copyright (C) 2009, 2013 BonitaSoft S.A.
- * BonitaSoft is a trademark of BonitaSoft SA.
- * This software file is BONITASOFT CONFIDENTIAL. Not For Distribution.
- * For commercial licensing information, contact:
- * BonitaSoft, 32 rue Gustave Eiffel – 38000 Grenoble
- * or BonitaSoft US, 51 Federal Street, Suite 305, San Francisco, CA 94107
- *******************************************************************************/
+ * BonitaSoft, 32 rue Gustave Eiffel - 38000 Grenoble
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2.0 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.bonitasoft.web.rest.server.datastore.bpm.cases;
 
 import static org.bonitasoft.web.rest.server.framework.utils.SearchOptionsBuilderUtil.computeIndex;
@@ -30,7 +38,7 @@ import org.bonitasoft.web.toolkit.client.data.APIID;
 
 /**
  * @author Colin PUY
- * 
+ *
  */
 public class CaseVariableDatastore extends CommonDatastore<CaseVariableItem, DataInstance>
         implements DatastoreHasSearch<CaseVariableItem>, DatastoreHasUpdate<CaseVariableItem> {
@@ -76,7 +84,7 @@ public class CaseVariableDatastore extends CommonDatastore<CaseVariableItem, Dat
 
     public void updateVariableValue(final long caseId, final String variableName, final String className, final String newValue) {
         try {
-            final Serializable converteValue = this.converter.convert(className, newValue);
+            final Serializable converteValue = converter.convert(className, newValue);
             getEngineProcessAPI().updateProcessDataInstance(variableName, caseId, converteValue);
         } catch (final Exception e) {
             throw new APIException("Error when updating case variable", e);
@@ -90,7 +98,7 @@ public class CaseVariableDatastore extends CommonDatastore<CaseVariableItem, Dat
             return new ItemSearchResult<CaseVariableItem>(page, resultsByPage,
                     countByCaseId(caseId), convert(processDataInstances));
         } catch (final Exception e) {
-            throw new APIException("Error when getting case variables");
+            throw new APIException("Error when getting case variables", e);
         }
     }
 
@@ -98,7 +106,7 @@ public class CaseVariableDatastore extends CommonDatastore<CaseVariableItem, Dat
         try {
             return getEngineProcessAPI().getNumberOfProcessDataInstances(caseId);
         } catch (final Exception e) {
-            throw new APIException("Error while getting the number of case variables");
+            throw new APIException("Error while getting the number of case variables", e);
         }
     }
 
@@ -106,7 +114,7 @@ public class CaseVariableDatastore extends CommonDatastore<CaseVariableItem, Dat
         try {
             return convertEngineToConsoleItem(getEngineProcessAPI().getProcessDataInstance(variableName, caseId));
         } catch (final Exception e) {
-            throw new APIException("Error while getting case variable");
+            throw new APIException("Error while getting case variable", e);
         }
     }
 }

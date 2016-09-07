@@ -5,12 +5,10 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -24,25 +22,22 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
-import org.bonitasoft.console.common.server.preferences.constants.WebBonitaConstants;
-import org.bonitasoft.console.common.server.preferences.constants.WebBonitaConstantsUtils;
 import org.bonitasoft.console.common.server.preferences.properties.PropertiesFactory;
 import org.bonitasoft.engine.api.ProfileAPI;
 import org.bonitasoft.engine.api.TenantAPIAccessor;
-import org.bonitasoft.engine.exception.BonitaException;
 import org.bonitasoft.engine.exception.BonitaHomeNotSetException;
 import org.bonitasoft.engine.exception.NotFoundException;
 import org.bonitasoft.engine.exception.ServerAPIException;
 import org.bonitasoft.engine.exception.UnknownAPITypeException;
 import org.bonitasoft.engine.profile.Profile;
+import org.bonitasoft.engine.profile.ProfileCriterion;
 import org.bonitasoft.engine.session.APISession;
 import org.bonitasoft.engine.session.InvalidSessionException;
 
 /**
  * Tenant management utils class
- * 
+ *
  * @author Anthony Birembaut
- * 
  */
 public class TenantsManagementUtils {
 
@@ -58,7 +53,7 @@ public class TenantsManagementUtils {
 
     /**
      * Copy file
-     * 
+     *
      * @param sourceFile
      * @param targetFile
      * @throws IOException
@@ -99,7 +94,7 @@ public class TenantsManagementUtils {
 
     /**
      * Copy a directory
-     * 
+     *
      * @param sourceDir
      * @param targetDir
      * @throws IOException
@@ -108,7 +103,7 @@ public class TenantsManagementUtils {
         // new target folder
         new File(targetDir).mkdirs();
 
-        // get the file or folder of sorcefolder
+        // get the file or folder of sourceDir
         final File[] file = new File(sourceDir).listFiles();
         for (int i = 0; i < file.length; i++) {
             if (file[i].isFile()) {
@@ -126,7 +121,7 @@ public class TenantsManagementUtils {
 
     /**
      * Delete a directory
-     * 
+     *
      * @param targetDir
      */
     protected static void deleteDirectory(final String targetDir) {
@@ -146,16 +141,12 @@ public class TenantsManagementUtils {
     }
 
     /**
-     * Check for user's pofile
+     * Check for user's profile
      */
     public static boolean hasProfileForUser(final APISession apiSession) throws NotFoundException, InvalidSessionException, BonitaHomeNotSetException,
             ServerAPIException, UnknownAPITypeException {
-        return !getUserProfiles(apiSession).isEmpty();
-    }
-
-    private static List<Profile> getUserProfiles(final APISession session) throws InvalidSessionException, NotFoundException, BonitaHomeNotSetException,
-            ServerAPIException, UnknownAPITypeException {
-        return getProfileApi(session).getProfilesForUser(session.getUserId());
+        final List<Profile> userProfiles = getProfileApi(apiSession).getProfilesForUser(apiSession.getUserId(), 0, 1, ProfileCriterion.ID_ASC);
+        return !userProfiles.isEmpty();
     }
 
     private static ProfileAPI getProfileApi(final APISession session) throws InvalidSessionException, BonitaHomeNotSetException, ServerAPIException,
@@ -164,36 +155,10 @@ public class TenantsManagementUtils {
     }
 
     /**
-     * copy the tenant template directory
-     * 
-     * @return true if the tenant directory was created
-     * @param tenantId
-     * @throws IOException
-     * @throws BonitaException
-     */
-    public static synchronized boolean addDirectoryForTenant(final long tenantId) throws IOException, BonitaException {
-        // add tenant folder
-        final String targetDirPath = WebBonitaConstantsUtils.getInstance().getTenantsFolder().getPath() + File.separator + tenantId;
-        final String sourceDirPath = WebBonitaConstantsUtils.getInstance().getTenantTemplateFolder().getPath();
-        // copy configuration files
-        final File targetDir = new File(targetDirPath + File.separator + WebBonitaConstants.workFolderName);
-        if (!targetDir.exists()) {
-            try {
-                copyDirectory(sourceDirPath, targetDirPath);
-                return true;
-            } catch (final IOException e) {
-                deleteDirectory(targetDirPath);
-                throw e;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Get default tenant ID
-     * 
+     *
      * @throws DefaultTenantIdException
-     *             If default tenant id couldn't be retrieved
+     *         If default tenant id couldn't be retrieved
      */
     public static long getDefaultTenantId() {
         try {

@@ -25,14 +25,11 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.bonitasoft.console.common.server.auth.AuthenticationManagerProperties;
 import org.bonitasoft.console.common.server.login.HttpServletRequestAccessor;
-import org.bonitasoft.console.common.server.login.LoginManager;
-import org.bonitasoft.console.common.server.login.LoginManagerProperties;
-import org.bonitasoft.console.common.server.login.LoginManagerPropertiesFactory;
 import org.bonitasoft.console.common.server.sso.InternalSSOManager;
 import org.bonitasoft.console.common.server.utils.SessionUtil;
 import org.bonitasoft.engine.session.APISession;
@@ -78,6 +75,7 @@ import org.bonitasoft.forms.server.exception.NoCredentialsInSessionException;
 import org.bonitasoft.forms.server.provider.FormServiceProvider;
 import org.bonitasoft.forms.server.provider.impl.util.FormServiceProviderFactory;
 import org.bonitasoft.forms.server.provider.impl.util.FormServiceProviderUtil;
+import org.bonitasoft.forms.server.util.LocaleUtil;
 import org.bonitasoft.web.rest.model.user.User;
 import org.w3c.dom.Document;
 
@@ -86,7 +84,7 @@ import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 /**
  * Servlet implementing the Forms service for async calls
- * 
+ *
  * @author Anthony Birembaut, Qixiang Zhang, Vincent Elcrin
  */
 public class FormsServlet extends RemoteServiceServlet implements FormsService {
@@ -112,22 +110,9 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     private final FormFieldValuesUtil formFieldValuesUtil = new FormFieldValuesUtil();
 
     /**
-     * The cookie name for the forms locale
+     * locale Util
      */
-    public static final String FORM_LOCALE_COOKIE_NAME = "BOS_Locale";
-
-    /**
-     * the engine API session param key name
-     */
-    public static final String API_SESSION_PARAM_KEY = "apiSession";
-
-    /**
-     * the user session param key name
-     */
-    public static final String USER_SESSION_PARAM_KEY = "user";
-
-    /** the factory to retrieve LoginManager Properties */
-    public static final LoginManagerPropertiesFactory loginManagerPropertiesFactory = new LoginManagerPropertiesFactory();
+    protected final LocaleUtil localeUtil = new LocaleUtil();
 
     /**
      * {@inheritDoc}
@@ -151,10 +136,10 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     @Override
     public ReducedApplicationConfig getApplicationConfig(final String formID, final Map<String, Object> urlContext, final boolean includeApplicationTemplate)
             throws RPCException, SessionTimeoutException, ForbiddenApplicationAccessException, MigrationProductVersionNotIdenticalException {
-        final String localeStr = getLocale();
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(localeStr));
+        final HttpServletRequest request = getThreadLocalRequest();
+        final String localeStr = localeUtil.getLocale(request);
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeStr));
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             final Document document = formServiceProvider.getFormDefinitionDocument(context);
@@ -192,18 +177,17 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * {@inheritDoc}
-     * 
      */
     @Override
     public ReducedFormPage getFormFirstPage(final String formID, final Map<String, Object> urlContext) throws SessionTimeoutException, RPCException,
             SuspendedFormException, CanceledFormException, FormAlreadySubmittedException, ForbiddenFormAccessException, FormInErrorException,
             MigrationProductVersionNotIdenticalException, SkippedFormException, AbortedFormException {
-        final String localeStr = getLocale();
-        final Locale userLocale = resolveLocale(localeStr);
+        final HttpServletRequest request = getThreadLocalRequest();
+        final String localeStr = localeUtil.getLocale(request);
+        final Locale userLocale = localeUtil.resolveLocale(localeStr);
         final Map<String, Object> context = initContext(urlContext, userLocale);
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             final Document document = formServiceProvider.getFormDefinitionDocument(context);
@@ -286,11 +270,11 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * Set the classloader matching the given context
-     * 
+     *
      * @param formServiceProvider
-     *            the form service provider
+     *        the form service provider
      * @param context
-     *            the context (including URL parameters)
+     *        the context (including URL parameters)
      * @throws SessionTimeoutException
      * @throws FormNotFoundException
      */
@@ -304,18 +288,18 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * Initialize the context map
-     * 
+     *
      * @param urlContext
-     *            the map of URL parameters
+     *        the map of URL parameters
      * @param locale
-     *            the user locale
+     *        the user locale
      * @return the context map
      */
     protected Map<String, Object> initContext(final Map<String, Object> urlContext, final Locale locale) {
         final HttpServletRequest request = getThreadLocalRequest();
         final HttpSession httpSession = request.getSession();
-        final APISession aAPISession = (APISession) httpSession.getAttribute(LoginManager.API_SESSION_PARAM_KEY);
-        final Map<String, Object> context = new HashMap<String, Object>();
+        final APISession aAPISession = (APISession) httpSession.getAttribute(SessionUtil.API_SESSION_PARAM_KEY);
+        final Map<String, Object> context = new HashMap<>();
         context.put(FormServiceProviderUtil.URL_CONTEXT, urlContext);
         context.put(FormServiceProviderUtil.LOCALE, locale);
         context.put(FormServiceProviderUtil.API_SESSION, aAPISession);
@@ -324,18 +308,17 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * {@inheritDoc}
-     * 
      */
     @Override
     public ReducedFormPage getFormNextPage(final String formID, final Map<String, Object> urlContext, final String nextPageExpressionId,
             final Map<String, FormFieldValue> fieldValues) throws RPCException, SessionTimeoutException, FormAlreadySubmittedException, SuspendedFormException,
-            CanceledFormException, ForbiddenFormAccessException, FormInErrorException, SkippedFormException, AbortedFormException {
-        final String localeStr = getLocale();
-        final Locale userLocale = resolveLocale(localeStr);
+                    CanceledFormException, ForbiddenFormAccessException, FormInErrorException, SkippedFormException, AbortedFormException {
+        final HttpServletRequest request = getThreadLocalRequest();
+        final String localeStr = localeUtil.getLocale(request);
+        final Locale userLocale = localeUtil.resolveLocale(localeStr);
         final Map<String, Object> context = initContext(urlContext, userLocale);
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             final Date deployementDate = formServiceProvider.getDeployementDate(context);
@@ -382,12 +365,12 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
             throw new FormAlreadySubmittedException(e);
         } catch (final NoCredentialsInSessionException e) {
             if (LOGGER.isLoggable(Level.INFO)) {
-                LOGGER.log(Level.INFO, "Session timeout");
+                LOGGER.log(Level.INFO, "Invalid Session");
             }
             throw new SessionTimeoutException(e.getMessage(), e);
         } catch (final SessionTimeoutException e) {
             if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.INFO, "Invalid Session");
+                LOGGER.log(Level.FINE, "Session timeout");
             }
             final HttpServletRequestAccessor httpServletRequestAccessor = new HttpServletRequestAccessor(getThreadLocalRequest());
             SessionUtil.sessionLogout(httpServletRequestAccessor.getHttpSession());
@@ -408,9 +391,9 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     @Override
     public Map<String, Object> skipForm(final String formID, final Map<String, Object> urlContext) throws RPCException, SessionTimeoutException,
             FormAlreadySubmittedException, IllegalActivityTypeException {
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(getLocale()));
+        final HttpServletRequest request = getThreadLocalRequest();
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeUtil.getLocale(request)));
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             return formServiceProvider.skipForm(formID, context);
@@ -437,15 +420,15 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     @Override
     public Map<String, List<ReducedFormValidator>> validateFormFields(final String formID, final Map<String, Object> urlContext,
             final Map<String, String> validatorsMap, final Map<String, FormFieldValue> widgetValues, final String submitButtonId) throws RPCException,
-            SessionTimeoutException {
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(getLocale()));
+                    SessionTimeoutException {
+        final HttpServletRequest request = getThreadLocalRequest();
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeUtil.getLocale(request)));
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             setClassloader(formServiceProvider, context);
-            final Map<String, List<ReducedFormValidator>> nonCompliantValidators = new HashMap<String, List<ReducedFormValidator>>();
+            final Map<String, List<ReducedFormValidator>> nonCompliantValidators = new HashMap<>();
             final Map<String, Serializable> transientDataContext = getFormTransientDataContext(formServiceProvider, formID, context);
             context.put(FormServiceProviderUtil.TRANSIENT_DATA_CONTEXT, transientDataContext);
             for (final Entry<String, String> validatorsEntry : validatorsMap.entrySet()) {
@@ -457,7 +440,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
                 final List<FormValidator> nonCompliantFieldValidators = formServiceProvider.validateField(fieldValidators, fieldId, fieldValue, submitButtonId,
                         context);
                 if (!nonCompliantFieldValidators.isEmpty()) {
-                    final List<ReducedFormValidator> reducedValidators = new ArrayList<ReducedFormValidator>();
+                    final List<ReducedFormValidator> reducedValidators = new ArrayList<>();
                     for (final FormValidator formValidator : nonCompliantFieldValidators) {
                         reducedValidators.add(formValidator.getReducedFormValidator());
                     }
@@ -488,10 +471,10 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     @Override
     public List<ReducedFormValidator> validateFormPage(final String formID, final Map<String, Object> urlContext, final String pageValidatorsId,
             final Map<String, FormFieldValue> fields, final String submitButtonId) throws RPCException, SessionTimeoutException {
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(getLocale()));
+        final HttpServletRequest request = getThreadLocalRequest();
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeUtil.getLocale(request)));
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             setClassloader(formServiceProvider, context);
@@ -500,7 +483,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
             final FormCacheUtil formCacheUtil = FormCacheUtilFactory.getTenantFormCacheUtil(tenantID);
             final List<FormValidator> pageValidators = formCacheUtil.getPageValidators(pageValidatorsId);
             final List<FormValidator> nonCompliantFieldValidators = formServiceProvider.validatePage(pageValidators, fields, submitButtonId, context);
-            final List<ReducedFormValidator> reducedValidators = new ArrayList<ReducedFormValidator>();
+            final List<ReducedFormValidator> reducedValidators = new ArrayList<>();
             for (final FormValidator formValidator : nonCompliantFieldValidators) {
                 reducedValidators.add(formValidator.getReducedFormValidator());
             }
@@ -522,9 +505,9 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * Retrieve the true ID of the field with the given client ID
-     * 
+     *
      * @param key
-     *            the ID returned by the client part
+     *        the ID returned by the client part
      * @return the true ID
      */
     protected String getFieldId(final String key) {
@@ -533,11 +516,11 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * Retrieve the value of the field with the given ID
-     * 
+     *
      * @param fieldId
-     *            the field ID
+     *        the field ID
      * @param widgetValues
-     *            the values of the fields
+     *        the values of the fields
      * @return a {@link FormFieldValue}
      */
     protected FormFieldValue getFieldValue(final String fieldId, final Map<String, FormFieldValue> widgetValues) {
@@ -548,13 +531,15 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
      * {@inheritDoc}
      */
     @Override
-    public ReducedHtmlTemplate getFormConfirmationTemplate(final String formID, final Map<String, Object> urlContext) throws RPCException,
-            SessionTimeoutException {
-        final String localeStr = getLocale();
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(localeStr));
+    public ReducedHtmlTemplate getFormConfirmationTemplate(final String formID, final Map<String, Object> urlContext,
+            final Map<String, FormFieldValue> fieldValues)
+                    throws RPCException,
+                    SessionTimeoutException {
+        final HttpServletRequest request = getThreadLocalRequest();
+        final String localeStr = localeUtil.getLocale(request);
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeStr));
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             final Date deployementDate = formServiceProvider.getDeployementDate(context);
@@ -569,6 +554,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
             setClassloader(formServiceProvider, context);
             final Map<String, Serializable> transientDataContext = getFormTransientDataContext(formServiceProvider, formID, context);
             context.put(FormServiceProviderUtil.TRANSIENT_DATA_CONTEXT, transientDataContext);
+            context.put(FormServiceProviderUtil.FIELD_VALUES, fieldValues);
             htmlTemplate.setDynamicMessage((String) formServiceProvider.resolveExpression(htmlTemplate.getDynamicMessageExpression(), context));
             return htmlTemplate.getReducedHtmlTemplate();
         } catch (final NoCredentialsInSessionException e) {
@@ -599,10 +585,10 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     @Override
     public ReducedHtmlTemplate getApplicationErrorTemplate(final String formID, final Map<String, Object> urlContext) throws RPCException,
             SessionTimeoutException {
-        final String localeStr = getLocale();
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(localeStr));
+        final HttpServletRequest request = getThreadLocalRequest();
+        final String localeStr = localeUtil.getLocale(request);
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeStr));
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             final Date deployementDate = formServiceProvider.getDeployementDate(context);
@@ -635,9 +621,9 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
      */
     @Override
     public FormURLComponents getNextFormURL(final String formID, final Map<String, Object> urlContext) throws RPCException, SessionTimeoutException {
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(getLocale()));
+        final HttpServletRequest request = getThreadLocalRequest();
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeUtil.getLocale(request)));
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             context.put(FormServiceProviderUtil.REQUEST, request);
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
@@ -663,14 +649,49 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
         }
     }
 
+    @Override
+    public void assignForm(final String formID, final Map<String, Object> urlContext) throws RPCException, SessionTimeoutException,
+            ForbiddenFormAccessException {
+        final HttpServletRequest request = getThreadLocalRequest();
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeUtil.getLocale(request)));
+        try {
+            context.put(FormServiceProviderUtil.REQUEST, request);
+            final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
+            final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
+            formServiceProvider.assignForm(formID, context);
+        } catch (final NoCredentialsInSessionException e) {
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, "Session timeout");
+            }
+            throw new SessionTimeoutException(e.getMessage(), e);
+        } catch (final ForbiddenFormAccessException e) {
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, e.getMessage(), e);
+            }
+            throw e;
+        } catch (final SessionTimeoutException e) {
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, "Invalid Session");
+            }
+            final HttpServletRequestAccessor httpServletRequestAccessor = new HttpServletRequestAccessor(getThreadLocalRequest());
+            SessionUtil.sessionLogout(httpServletRequestAccessor.getHttpSession());
+            throw new SessionTimeoutException();
+        } catch (final Throwable e) {
+            if (LOGGER.isLoggable(Level.SEVERE)) {
+                LOGGER.log(Level.SEVERE, "Error while getting the next task", e);
+            }
+            throw new RPCException(e.getMessage(), e);
+        }
+    }
+
     /**
      * store the transient data context for the current page flow displayed in the session
-     * 
+     *
      * @param formServiceProvider
      * @param formID
-     *            the form ID
+     *        the form ID
      * @param transientDataContext
-     *            the transient data context
+     *        the transient data context
      * @param context
      */
     protected void setFormTransientDataContext(final FormServiceProvider formServiceProvider, final String formID,
@@ -688,12 +709,12 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * Get the transient data context for the current page flow displayed from the session
-     * 
+     *
      * @param formServiceProvider
      * @param formID
-     *            the form ID
+     *        the form ID
      * @param context
-     * @return a Map<String, Object> containing the context of transient data
+     * @return a Map&lt;String, Object&gt; containing the context of transient data
      */
     protected Map<String, Serializable> getFormTransientDataContext(final FormServiceProvider formServiceProvider, final String formID,
             final Map<String, Object> context) {
@@ -705,12 +726,11 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * Get the transient data context for the current page flow displayed from the session
-     * 
+     *
      * @param formServiceProvider
      * @param formID
-     *            the form ID
+     *        the form ID
      * @param context
-     * @return a Map<String, Object> containing the context of transient data
      */
     protected void removeFormTransientDataContext(final FormServiceProvider formServiceProvider, final String formID, final Map<String, Object> context) {
 
@@ -725,17 +745,17 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     @Override
     public List<ReducedFormFieldAvailableValue> getFormAsyncAvailableValues(final String formID, final Map<String, Object> urlContext,
             final ReducedFormWidget formWidget, final FormFieldValue currentFieldValue) throws RPCException, SessionTimeoutException {
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(getLocale()));
+        final HttpServletRequest request = getThreadLocalRequest();
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeUtil.getLocale(request)));
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             setClassloader(formServiceProvider, context);
             final Map<String, Serializable> transientDataContext = getFormTransientDataContext(formServiceProvider, formID, context);
             context.put(FormServiceProviderUtil.TRANSIENT_DATA_CONTEXT, transientDataContext);
             // put the current value of the field in the field context
-            final Map<String, FormFieldValue> fieldContext = new HashMap<String, FormFieldValue>();
+            final Map<String, FormFieldValue> fieldContext = new HashMap<>();
             fieldContext.put(formWidget.getId(), currentFieldValue);
             context.put(FormServiceProviderUtil.FIELD_VALUES, fieldContext);
             Object availableValuesObject = null;
@@ -769,72 +789,17 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     }
 
     /**
-     * @param localeStr
-     *            the user's locale as a string
-     * @return the user's {@link Locale}
-     */
-    protected Locale resolveLocale(final String localeStr) {
-        final String[] localeParams = localeStr.split("_");
-        final String language = localeParams[0];
-        Locale userLocale = null;
-        if (localeParams.length > 1) {
-            final String country = localeParams[1];
-            userLocale = new Locale(language, country);
-        } else {
-            userLocale = new Locale(language);
-        }
-        return userLocale;
-    }
-
-    /**
-     * @return the user's locale as a String
-     */
-    protected String getLocale() {
-        String localeStr = null;
-        final HttpServletRequest request = getThreadLocalRequest();
-        final HttpSession session = request.getSession();
-        final User user = (User) session.getAttribute(USER_SESSION_PARAM_KEY);
-        if (user != null) {
-            localeStr = getFormLocale();
-        }
-        if (localeStr == null && user != null) {
-            localeStr = user.getLocale();
-        }
-        if (localeStr == null) {
-            localeStr = request.getLocale().toString();
-        }
-        return localeStr;
-    }
-
-    protected String getFormLocale() {
-        String userLocaleStr = null;
-        final String theLocaleCookieName = FORM_LOCALE_COOKIE_NAME;
-        final Cookie theCookies[] = getThreadLocalRequest().getCookies();
-        Cookie theCookie = null;
-        if (theCookies != null) {
-            for (int i = 0; i < theCookies.length; i++) {
-                if (theCookies[i].getName().equals(theLocaleCookieName)) {
-                    theCookie = theCookies[i];
-                    userLocaleStr = theCookie.getValue().toString();
-                    break;
-                }
-            }
-        }
-        return userLocaleStr;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
     public Map<String, Object> executeActions(final String formID, final Map<String, Object> urlContext, final Map<String, FormFieldValue> fieldValues,
             final List<String> pageIds, final String submitButtonId) throws RPCException, SessionTimeoutException, FileTooBigException,
-            FormAlreadySubmittedException {
-        final String localeStr = getLocale();
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(getLocale()));
+                    FormAlreadySubmittedException {
+        final HttpServletRequest request = getThreadLocalRequest();
+        final String localeStr = localeUtil.getLocale(request);
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeStr));
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             context.put(FormServiceProviderUtil.FIELD_VALUES, fieldValues);
             context.put(FormServiceProviderUtil.SUBMIT_BUTTON_ID, submitButtonId);
@@ -863,7 +828,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
             }
             throw new FileTooBigException(e.getMessage(), e.getFileName(), e.getMaxSize());
         } catch (final SessionTimeoutException e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
+            if (LOGGER.isLoggable(Level.INFO)) {
                 LOGGER.log(Level.INFO, "Invalid Session");
             }
             final HttpServletRequestAccessor httpServletRequestAccessor = new HttpServletRequestAccessor(getThreadLocalRequest());
@@ -880,10 +845,10 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
      * {@inheritDoc}
      */
     @Override
-    public Map<String, Object> getAnyTodoListForm(final Map<String, Object> urlContext) throws RPCException, SessionTimeoutException {
-        final Map<String, Object> context = initContext(urlContext, resolveLocale(getLocale()));
+    public FormURLComponents getAnyTodoListForm(final Map<String, Object> urlContext) throws RPCException, SessionTimeoutException {
+        final HttpServletRequest request = getThreadLocalRequest();
+        final Map<String, Object> context = initContext(urlContext, localeUtil.resolveLocale(localeUtil.getLocale(request)));
         try {
-            final HttpServletRequest request = getThreadLocalRequest();
             final long tenantID = retrieveCredentialAndReturnTenantID(request, context);
             final FormServiceProvider formServiceProvider = FormServiceProviderFactory.getFormServiceProvider(tenantID);
             return formServiceProvider.getAnyTodoListForm(context);
@@ -917,7 +882,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
         try {
             final HttpServletRequest request = getThreadLocalRequest();
             final HttpSession session = request.getSession();
-            final User user = (User) session.getAttribute(USER_SESSION_PARAM_KEY);
+            final User user = (User) session.getAttribute(SessionUtil.USER_SESSION_PARAM_KEY);
             if (user == null) {
                 final String errorMessage = "There is no user in the HTTP session.";
                 if (LOGGER.isLoggable(Level.WARNING)) {
@@ -925,7 +890,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
                 }
                 throw new NoCredentialsInSessionException(errorMessage);
             }
-            final APISession apiSession = (APISession) session.getAttribute(API_SESSION_PARAM_KEY);
+            final APISession apiSession = (APISession) session.getAttribute(SessionUtil.API_SESSION_PARAM_KEY);
             long tenantId = 0L;
             if (apiSession != null) {
                 tenantId = apiSession.getTenantId();
@@ -948,13 +913,15 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     /**
      * @param user
      */
-    private void manageLogoutDisplay(final User user, long tenantId) {
-        List<String> features = user.getFeatures();
-        if (features != null && (!features.contains(LoginManagerProperties.LOGOUT_ENABLED) || !features.contains(LoginManagerProperties.LOGOUT_DISABLED))) {
-            if (loginManagerPropertiesFactory.getProperties(tenantId).isLogoutDisabled()) {
-                features.add(LoginManagerProperties.LOGOUT_DISABLED);
+    private void manageLogoutDisplay(final User user, final long tenantId) {
+        final List<String> features = user.getFeatures();
+        if (features != null
+                && (!features.contains(AuthenticationManagerProperties.LOGOUT_ENABLED)
+                        || !features.contains(AuthenticationManagerProperties.LOGOUT_DISABLED))) {
+            if (AuthenticationManagerProperties.getProperties(tenantId).isLogoutDisabled()) {
+                features.add(AuthenticationManagerProperties.LOGOUT_DISABLED);
             } else {
-                features.add(LoginManagerProperties.LOGOUT_ENABLED);
+                features.add(AuthenticationManagerProperties.LOGOUT_ENABLED);
             }
         }
     }
@@ -966,7 +933,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     public String generateTemporaryToken() throws RPCException, SessionTimeoutException {
         final HttpServletRequest request = getThreadLocalRequest();
         final HttpSession httpSession = request.getSession();
-        final APISession aAPISession = (APISession) httpSession.getAttribute(LoginManager.API_SESSION_PARAM_KEY);
+        final APISession aAPISession = (APISession) httpSession.getAttribute(SessionUtil.API_SESSION_PARAM_KEY);
         String userToken = null;
         if (aAPISession != null) {
             userToken = InternalSSOManager.getInstance().add(aAPISession);
@@ -981,21 +948,21 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
     public void logout() throws RPCException, SessionTimeoutException {
         final HttpServletRequest request = getThreadLocalRequest();
         final HttpSession session = request.getSession();
-        session.removeAttribute(USER_SESSION_PARAM_KEY);
-        session.removeAttribute(API_SESSION_PARAM_KEY);
+        session.removeAttribute(SessionUtil.USER_SESSION_PARAM_KEY);
+        session.removeAttribute(SessionUtil.API_SESSION_PARAM_KEY);
     }
 
     /**
      * Retrieve the API session from the HTTP session and return it
-     * 
+     *
      * @param request
-     *            the HTTP request
+     *        the HTTP request
      * @return the API session
      * @throws NoCredentialsInSessionException
      */
     protected APISession getAPISession(final HttpServletRequest request) throws NoCredentialsInSessionException {
         final HttpSession session = request.getSession();
-        final APISession apiSession = (APISession) session.getAttribute(API_SESSION_PARAM_KEY);
+        final APISession apiSession = (APISession) session.getAttribute(SessionUtil.API_SESSION_PARAM_KEY);
         if (apiSession == null) {
             final String errorMessage = "There is no engine API session in the HTTP session.";
             if (LOGGER.isLoggable(Level.SEVERE)) {
@@ -1008,11 +975,11 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * Retrieve the API session and the user from the HTTP session and add them in the context
-     * 
+     *
      * @param request
-     *            the HTTP request
+     *        the HTTP request
      * @param context
-     *            the context
+     *        the context
      * @return the tenant ID
      * @throws NoCredentialsInSessionException
      */
@@ -1020,7 +987,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
             throws NoCredentialsInSessionException {
         final HttpSession session = request.getSession();
 
-        final User user = (User) session.getAttribute(USER_SESSION_PARAM_KEY);
+        final User user = (User) session.getAttribute(SessionUtil.USER_SESSION_PARAM_KEY);
         if (user == null) {
             final String errorMessage = "There is no user in the HTTP session.";
             if (LOGGER.isLoggable(Level.WARNING)) {
@@ -1029,7 +996,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
             throw new NoCredentialsInSessionException(errorMessage);
         }
         // The API session is not mandatory (it is when using the default form service provider)
-        final APISession apiSession = (APISession) session.getAttribute(API_SESSION_PARAM_KEY);
+        final APISession apiSession = (APISession) session.getAttribute(SessionUtil.API_SESSION_PARAM_KEY);
         context.put(FormServiceProviderUtil.API_SESSION, apiSession);
         context.put(FormServiceProviderUtil.USER, user);
         return apiSession.getTenantId();
@@ -1037,13 +1004,13 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
 
     /**
      * Resolve expression from ApplicationConfig and set result into the reduced application config.
-     * 
+     *
      * @param formServiceProvider
-     *            is used to resolve the expressions
+     *        is used to resolve the expressions
      * @param context
-     *            needed by applicationConfig
+     *        needed by applicationConfig
      * @param applicationConfig
-     *            contains expressions to resolve as well as the application config reduced
+     *        contains expressions to resolve as well as the application config reduced
      * @return applicationConfig
      * @throws FormNotFoundException
      * @throws SessionTimeoutException
@@ -1053,7 +1020,7 @@ public class FormsServlet extends RemoteServiceServlet implements FormsService {
      */
     private ApplicationConfig resolveApplicationConfigExpressions(final FormServiceProvider formServiceProvider, final Map<String, Object> context,
             final ApplicationConfig applicationConfig) throws FormNotFoundException, SessionTimeoutException,
-            org.bonitasoft.forms.server.exception.FileTooBigException, IOException, FormInitializationException {
+                    org.bonitasoft.forms.server.exception.FileTooBigException, IOException, FormInitializationException {
         try {
             context.put(FormServiceProviderUtil.IS_CONFIG_CONTEXT, true);
 

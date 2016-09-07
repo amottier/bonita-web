@@ -5,12 +5,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -35,7 +35,6 @@ import java.util.logging.Logger;
 
 import org.bonitasoft.engine.expression.ExpressionType;
 import org.bonitasoft.forms.client.model.Expression;
-import org.bonitasoft.forms.client.model.FileWidgetInputType;
 import org.bonitasoft.forms.client.model.FormFieldAvailableValue;
 import org.bonitasoft.forms.client.model.FormFieldValue;
 import org.bonitasoft.forms.client.model.FormWidget;
@@ -54,7 +53,7 @@ import org.bonitasoft.forms.server.provider.impl.util.FormServiceProviderUtil;
 
 /**
  * @author Anthony Birembaut, Haojie Yuan
- * 
+ *
  */
 public class FormFieldValuesUtil {
 
@@ -108,7 +107,7 @@ public class FormFieldValuesUtil {
 
     /**
      * Build a field value object from the process definition
-     * 
+     *
      * @param value
      *            the value retrieved from the engine
      * @param formWidget
@@ -219,7 +218,7 @@ public class FormFieldValuesUtil {
 
     /**
      * Build a FormFieldAvailableValue List from a String {@link Collection}
-     * 
+     *
      * @param collection
      * @return a List of {@link FormFieldAvailableValue}
      */
@@ -234,7 +233,7 @@ public class FormFieldValuesUtil {
 
     /**
      * Build a FormFieldAvailableValue List from a {@link Map}
-     * 
+     *
      * @param availableValuesMap
      * @return a List of {@link FormFieldAvailableValue}
      */
@@ -252,7 +251,7 @@ public class FormFieldValuesUtil {
 
     /**
      * Build a FormFieldAvailableValue List from a {@link Map} or a {@link List} and set it in the widget
-     * 
+     *
      * @param availableValuesObject
      *            the {@link Map} or {@link List} of values
      * @param widgetId
@@ -274,11 +273,9 @@ public class FormFieldValuesUtil {
 
     /**
      * Build a FormFieldAvailableValue List from a {@link Map} or a {@link List} and set it in the widget
-     * 
+     *
      * @param availableValuesObject
      *            the {@link Map} or {@link List} of values
-     * @param widget
-     *            the widget to set
      * @return a List of {@link FormFieldAvailableValue}
      * @throws IllegalArgumentException
      */
@@ -299,11 +296,11 @@ public class FormFieldValuesUtil {
 
     /**
      * Build a FormFieldAvailableValue List of List from a {@link List} of {@link Map} or a {@link List} of {@link List} and set it in the widget
-     * 
-     * @param availableValuesObject
+     *
+     * @param tableAvailableValuesObject
      *            the {@link List} of {@link Map} or {@link List} of {@link List} of values
-     * @param widget
-     *            the widget to set
+     * @param widgetId
+     *            the if of the widget to set
      * @return a List of List of {@link FormFieldAvailableValue}
      */
     public List<List<ReducedFormFieldAvailableValue>> getTableAvailableValues(final Object tableAvailableValuesObject, final String widgetId) {
@@ -324,7 +321,7 @@ public class FormFieldValuesUtil {
 
     /**
      * Retrieve the String value of an object
-     * 
+     *
      * @param object
      *            the object
      * @return the String representation of this Object
@@ -338,13 +335,13 @@ public class FormFieldValuesUtil {
 
     /**
      * Get display condition
-     * 
+     *
      * @param conditionExpression
-     * @param condition
+     * @param conditionObject
      * @throws FormNotFoundException
      * @throws FormServiceProviderNotFoundException
      */
-    protected boolean getDisplayConditionStr(final Expression conditionExpression, final Object conditionObject) throws FormNotFoundException,
+    protected boolean getDisplayCondition(final Expression conditionExpression, final Object conditionObject) throws FormNotFoundException,
             FormServiceProviderNotFoundException {
 
         boolean condition = true;
@@ -385,7 +382,7 @@ public class FormFieldValuesUtil {
 
     /**
      * Add the widget value to evaluate to the Map of expression to evaluated
-     * 
+     *
      * @param formWidget
      *            the widget
      * @param expressionsToEvaluate
@@ -419,7 +416,7 @@ public class FormFieldValuesUtil {
 
     /**
      * Generate the Map of groovy expressions to evaluate for a widget
-     * 
+     *
      * @param formWidget
      *            the widget
      * @param context
@@ -519,7 +516,7 @@ public class FormFieldValuesUtil {
      */
     protected void addFormWidgetAvailableValuesExpressions(final FormWidget formWidget, final List<Expression> expressionsToEvaluate) {
         final String widgetId = formWidget.getId();
-        if (formWidget.getAvailableValuesExpression() != null) {
+        if (formWidget.getAvailableValuesExpression() != null && !WidgetType.SUGGESTBOX_ASYNC.equals(formWidget.getType())) {
             final Expression availableValuesExpression = formWidget.getAvailableValuesExpression();
             availableValuesExpression.setName(widgetId + EXPRESSION_KEY_SEPARATOR + WIDGET_AVAILABLE_VALUES);
             expressionsToEvaluate.add(availableValuesExpression);
@@ -564,14 +561,12 @@ public class FormFieldValuesUtil {
 
     /**
      * Set the values of the form widget
-     * 
+     *
      * @param tenantID
      *            the tenantID
      * @param formWidget
      *            the widget
-     * @param previousPagesFields
-     * @param locale
-     * @param isCurrentValue
+     * @param evaluatedExpressions
      * @param context
      *            the context including the URL parameters
      * @throws FormNotFoundException
@@ -593,7 +588,7 @@ public class FormFieldValuesUtil {
             formWidget.getSubtitle().setLabel(getStringValue(evaluatedExpressions.get(widgetId + EXPRESSION_KEY_SEPARATOR + WIDGET_SUBTITLE)));
         }
         formWidget.setPopupTooltip(getStringValue(evaluatedExpressions.get(widgetId + EXPRESSION_KEY_SEPARATOR + WIDGET_TOOLTIP)));
-        formWidget.setDisplayCondition(getDisplayConditionStr(formWidget.getDisplayConditionExpression(),
+        formWidget.setDisplayCondition(getDisplayCondition(formWidget.getDisplayConditionExpression(),
                 evaluatedExpressions.get(widgetId + EXPRESSION_KEY_SEPARATOR + WIDGET_DISPLAY_CONDITION)));
 
         final Object value = getFormWidgetInitialValues(formWidget, evaluatedExpressions);
@@ -602,10 +597,8 @@ public class FormFieldValuesUtil {
             if (filePaths != null) {
                 final FormFieldValue fileFieldValue = new FormFieldValue(filePaths, File.class.getName());
                 formWidget.setInitialFieldValue(fileFieldValue);
-            } else if (!FileWidgetInputType.URL.equals(formWidget.getFileWidgetInputType())) {
-                formWidget.setInitialFieldValue(formServiceProvider.getAttachmentFormFieldValue(value, context));
             } else {
-                formWidget.setInitialFieldValue(getFieldValue(value, formWidget, locale));
+                formWidget.setInitialFieldValue(formServiceProvider.getAttachmentFormFieldValue(value, context));
             }
         } else if (!formWidget.getType().name().startsWith("BUTTON")) {
             // convert the value object returned into a FormFieldValue object.
@@ -668,7 +661,6 @@ public class FormFieldValuesUtil {
     }
 
     /**
-     * @param widgetId
      * @param formWidget
      * @param evaluatedExpressions
      */
@@ -714,7 +706,7 @@ public class FormFieldValuesUtil {
 
     /**
      * Set the tables parameters
-     * 
+     *
      * @param formWidget
      *            the widget
      * @param evaluatedExpressions
@@ -851,7 +843,7 @@ public class FormFieldValuesUtil {
 
     /**
      * set the widget values of a form page
-     * 
+     *
      * @param tenantID
      *            the tenant ID
      * @param widgets
@@ -891,7 +883,7 @@ public class FormFieldValuesUtil {
     private Map<String, Serializable> resolveDisplayExpressions(final List<FormWidget> widgets, final Map<String, Object> context,
             final FormServiceProvider formServiceProvider)
             throws FormNotFoundException, SessionTimeoutException, FileTooBigException, IOException, FormInitializationException {
-        Map<String, Serializable> resolvedExpressions = formServiceProvider.resolveExpressions(
+        final Map<String, Serializable> resolvedExpressions = formServiceProvider.resolveExpressions(
                 new DisplayExpressions(widgets).asList(),
                 context);
         return resolvedExpressions != null ? resolvedExpressions : new HashMap<String, Serializable>();
@@ -910,7 +902,7 @@ public class FormFieldValuesUtil {
     }
 
     private Boolean isAuthorized(final Map<String, Serializable> resolvedDisplayExp, final String widgetId) {
-        String widgetExpressionEntry = new WidgetExpressionEntry(widgetId, ExpressionId.WIDGET_DISPLAY_CONDITION)
+        final String widgetExpressionEntry = new WidgetExpressionEntry(widgetId, ExpressionId.WIDGET_DISPLAY_CONDITION)
                 .toString();
         return resolvedDisplayExp == null
                 || !resolvedDisplayExp.containsKey(widgetExpressionEntry)
@@ -922,17 +914,22 @@ public class FormFieldValuesUtil {
 
         final FormCacheUtil formCacheUtil = FormCacheUtilFactory.getTenantFormCacheUtil(tenantID);
         for (final FormWidget formWidget : formWidgets) {
-            if (isExpressionDynamic(formWidget.getInitialValueExpression()) || isArrayOfExpressionsDynamic(formWidget.getInitialValueExpressionArray())
-                    || isExpressionDynamic(formWidget.getAvailableValuesExpression()) || isListOfExpressionsDynamic(formWidget.getAvailableValues())
-                    || isListOfListOfExpressionsDynamic(formWidget.getTableAvailableValues())) {
-                formWidget.setHasDynamicValue(true);
-            }
-            final String formWidgetCacheId = formCacheUtil.storeFormWidget(formID, pageID, locale, processDeployementDate, formWidget);
-            formWidget.setFormWidgetCacheId(formWidgetCacheId);
-            if (formWidget.getValidators() != null) {
-                formWidget.setValidatorsCacheId(formCacheUtil.storeFieldValidators(formID, pageID, formWidget.getId(), locale, processDeployementDate,
-                        formWidget.getValidators()));
-            }
+            storeWidgetInCacheAndSetCacheID(formCacheUtil, formID, pageID, locale, processDeployementDate, formWidget);
+        }
+    }
+
+    protected void storeWidgetInCacheAndSetCacheID(final FormCacheUtil formCacheUtil, final String formID, final String pageID, final String locale,
+            final Date processDeployementDate, final FormWidget formWidget) {
+        if (isExpressionDynamic(formWidget.getInitialValueExpression()) || isArrayOfExpressionsDynamic(formWidget.getInitialValueExpressionArray())
+                || isExpressionDynamic(formWidget.getAvailableValuesExpression()) || isListOfExpressionsDynamic(formWidget.getAvailableValues())
+                || isListOfListOfExpressionsDynamic(formWidget.getTableAvailableValues()) || isExpressionDynamic(formWidget.getDisplayConditionExpression())) {
+            formWidget.setHasDynamicValue(true);
+        }
+        final String formWidgetCacheId = formCacheUtil.storeFormWidget(formID, pageID, locale, processDeployementDate, formWidget);
+        formWidget.setFormWidgetCacheId(formWidgetCacheId);
+        if (formWidget.getValidators() != null) {
+            formWidget.setValidatorsCacheId(formCacheUtil.storeFieldValidators(formID, pageID, formWidget.getId(), locale, processDeployementDate,
+                    formWidget.getValidators()));
         }
     }
 

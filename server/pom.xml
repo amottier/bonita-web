@@ -2,7 +2,7 @@
     <parent>
         <groupId>org.bonitasoft.console</groupId>
         <artifactId>bonita-console</artifactId>
-        <version>6.4.0-SNAPSHOT</version>
+        <version>7.3.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>console-server</artifactId>
@@ -15,8 +15,9 @@
         <enable.engine.http.api.end>--&gt;</enable.engine.http.api.end>
         <enable.engine.listener.start>&lt;!--</enable.engine.listener.start>
         <enable.engine.listener.end>--&gt;</enable.engine.listener.end>
+        <maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
+        <build.year>${maven.build.timestamp}</build.year>
         <webappDirectory>${project.build.directory}/${project.build.finalName}</webappDirectory>
-        <bonita.home>${bonita.home.test}/bonita</bonita.home>
     </properties>
 
     <dependencies>
@@ -43,6 +44,17 @@
             <groupId>org.bonitasoft.engine</groupId>
             <artifactId>bonita-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.bonitasoft.engine</groupId>
+            <artifactId>bonita-common</artifactId>
+        </dependency>
+
+        <!--Web extensions-->
+        <dependency>
+            <groupId>org.bonitasoft.web</groupId>
+            <artifactId>bonita-web-extensions</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!--Vendors-->
         <dependency>
@@ -53,6 +65,14 @@
         <dependency>
             <groupId>commons-fileupload</groupId>
             <artifactId>commons-fileupload</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
         </dependency>
         <dependency>
             <groupId>org.fedorahosted.tennera</groupId>
@@ -66,6 +86,73 @@
             <groupId>org.codehaus.jettison</groupId>
             <artifactId>jettison</artifactId>
         </dependency>
+        <dependency>
+            <groupId>ro.isdc.wro4j</groupId>
+            <artifactId>wro4j-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson-databind-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-mapper-asl</artifactId>
+            <version>${jackson-mapper-asl-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.json-simple</groupId>
+            <artifactId>json-simple</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.tuckey</groupId>
+            <artifactId>urlrewritefilter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>taglibs</groupId>
+            <artifactId>standard</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>jstl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.restlet.jse</groupId>
+            <artifactId>org.restlet</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.restlet.jee</groupId>
+            <artifactId>org.restlet.ext.servlet</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.restlet.jee</groupId>
+                    <artifactId>org.restlet</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.restlet.jse</groupId>
+            <artifactId>org.restlet.ext.jackson</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.restlet.jse</groupId>
+                    <artifactId>org.restlet</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.xbean</groupId>
+            <artifactId>xbean-classloader</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
 
         <!--Test-->
         <dependency>
@@ -75,28 +162,46 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>2.0.5</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>2.0.5</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.0.5</version>
-        </dependency>
-        <dependency>
-            <groupId>com.googlecode.json-simple</groupId>
-            <artifactId>json-simple</artifactId>
-            <version>1.1</version>
+            <groupId>net.javacrumbs.json-unit</groupId>
+            <artifactId>json-unit</artifactId>
+            <version>1.5.0</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bonitasoft.console</groupId>
+            <!-- <classifier>test</classifier> -->
+            <artifactId>console-common</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.1.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.1.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <!-- needs this version for tests -->
+            <version>3.1.2.RELEASE</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -186,51 +291,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <systemPropertyVariables>
-                        <bonita.home>${bonita.home}</bonita.home>
+                        <bonita.client.home>${bonita.client.home}</bonita.client.home>
                     </systemPropertyVariables>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>unpack-bonita-home</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.bonitasoft.console</groupId>
-                                    <artifactId>bonita-home</artifactId>
-                                    <version>${project.version}</version>
-                                    <type>zip</type>
-                                    <overWrite>true</overWrite>
-                                    <outputDirectory>${project.build.directory}/bonita-home</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>overwrite-login-conf</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <tasks>
-                                <copy file="${project.basedir}/src/test/resources/loginManager-config.properties" tofile="${project.build.directory}/bonita-home/bonita/client/platform/conf/loginManager-config.properties" overwrite="true" />
-                            </tasks>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
@@ -241,26 +304,94 @@
                 <!-- filtered in web.xml -->
                 <enable.engine.listener.start />
                 <enable.engine.listener.end />
+
+                <proxy-portal-js>&lt;rule&gt;&lt;from&gt;^/portal.js/(.*)$&lt;/from&gt;&lt;to type="proxy"
+                    qsappend="true"&gt;http://127.0.0.1:9000/bonita/portaljs/$1&lt;/to&gt;&lt;/rule&gt;</proxy-portal-js>
             </properties>
 
             <dependencies>
-                <dependency>
-                    <groupId>org.bonitasoft.console</groupId>
-                    <artifactId>console-client</artifactId>
-                    <version>${project.version}</version>
-                    <type>war</type>
-                    <scope>provided</scope>
-                </dependency>
                 <dependency>
                     <groupId>org.bonitasoft.engine</groupId>
                     <artifactId>bonita-server</artifactId>
                     <version>${bonita.engine.version}</version>
                     <scope>runtime</scope>
                 </dependency>
+                <dependency>
+                    <groupId>commons-httpclient</groupId>
+                    <artifactId>commons-httpclient</artifactId>
+                </dependency>
             </dependencies>
 
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy urlRewrite</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <stripVersion>true</stripVersion>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>org.tuckey</groupId>
+                                            <artifactId>urlrewritefilter</artifactId>
+                                            <outputDirectory>${basedir}/target/console-server-${project.version}/WEB-INF/lib</outputDirectory>
+                                        </artifactItem>
+                                        <artifactItem>
+                                            <groupId>commons-httpclient</groupId>
+                                            <artifactId>commons-httpclient</artifactId>
+                                            <outputDirectory>${basedir}/target/console-server-${project.version}/WEB-INF/lib</outputDirectory>
+                                        </artifactItem>
+                                    </artifactItems>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>Jetty Test web.xml set up</id>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                                <inherited>false</inherited>
+                                <configuration>
+                                    <target>
+                                        <!-- copy web.xml to another location -->
+                                        <copy todir="${basedir}/target" file="${basedir}/target/console-server-${project.version}/WEB-INF/web.xml" />
+                                        <!-- add rewrite filter -->
+                                        <replace file="${basedir}/target/web.xml">
+                                            <replacetoken><![CDATA[<!-- Cache Filter Mapping End -->]]></replacetoken>
+                                            <replacevalue><![CDATA[<!-- Cache Filter Mapping End -->
+    <filter>
+        <filter-name>UrlRewriteFilter</filter-name>
+        <filter-class>org.tuckey.web.filters.urlrewrite.UrlRewriteFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>UrlRewriteFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+    </filter-mapping>
+                                            ]]></replacevalue>
+                                        </replace>
+                                        <!-- put urlrewrite.xml file in WEB-INF -->
+                                        <copy todir="${basedir}/target/console-server-${project.version}/WEB-INF" file="${basedir}/src/test/resources/urlrewrite.xml" />
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+
                     <!-- Jetty configuration -->
                     <plugin>
                         <groupId>org.mortbay.jetty</groupId>
@@ -269,20 +400,29 @@
                         <configuration>
                             <systemProperties>
                                 <systemProperty>
-                                    <name>bonita.home</name>
-                                    <value>${bonita.home}</value>
+                                    <name>bonita.client.home</name>
+                                    <value>${bonita.client.home}</value>
+                                </systemProperty>
+                                <systemProperty>
+                                    <name>database.dir</name>
+                                    <value>${project.build.directory}/database</value>
+                                </systemProperty>
+                                <systemProperty>
+                                    <name>sysprop.bonita.db.vendor</name>
+                                    <value>h2</value>
                                 </systemProperty>
                             </systemProperties>
-                            <webApp>
-                                <baseResource implementation="org.eclipse.jetty.util.resource.ResourceCollection">
-                                    <resourcesAsCSV>src/main/webapp,${basedir}/../portal/target/console-client-${project.version}/</resourcesAsCSV>
+                            <webAppConfig>
+                                <contextPath>/bonita</contextPath>
+                                <baseResource implementation="org.mortbay.resource.ResourceCollection">
+                                    <resourcesAsCSV>${basedir}/../portal/target/console-client-${project.version}/,${basedir}/target/console-server-${project.version}/,${basedir}/src/main/webapp</resourcesAsCSV>
                                 </baseResource>
-                            </webApp>
+                            </webAppConfig>
                             <scanIntervalSeconds>0</scanIntervalSeconds>
+                            <webXml>${basedir}/target/console-server-${project.version}/WEB-INF/web.xml</webXml>
                             <jettyConfig>src/test/webapp/WEB-INF/jetty.xml</jettyConfig>
                             <jettyEnvXml>src/test/webapp/WEB-INF/jetty-env.xml</jettyEnvXml>
                             <webAppSourceDirectory>${webappDirectory}</webAppSourceDirectory>
-                            <contextPath>bonita</contextPath>
                         </configuration>
                         <dependencies>
                             <dependency>
@@ -291,13 +431,13 @@
                                 <version>1.0.1</version>
                                 <scope>runtime</scope>
                             </dependency>
-                             <dependency>
-					            <groupId>org.slf4j</groupId>
+                            <dependency>
+                                <groupId>org.slf4j</groupId>
                                 <artifactId>slf4j-api</artifactId>
                                 <version>${slf4j.version}</version>
                                 <scope>runtime</scope>
-					        </dependency>
-					        
+                            </dependency>
+
                             <!-- DATASOURCE JNDI -->
                             <dependency>
                                 <groupId>commons-dbcp</groupId>
@@ -345,7 +485,7 @@
                             </dependency>
                         </dependencies>
                     </plugin>
-                    
+
                     <!-- Themes needs to be on the classes path -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>

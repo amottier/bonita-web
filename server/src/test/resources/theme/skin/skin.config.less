@@ -5,7 +5,7 @@
 @height: @h;
 @w: 5px; // std width
 @width: @w;
-@mainAccentColor: #b20706; //the main skin color (red)
+@mainAccentColor: #DD0033; //the main skin color (red)
 //@mainAccentColor: #2674b0; //the main skin color (blue)
 @secondAccentColor: #313433;
 @color3: #666666; //calendar links, button3 text color
@@ -226,6 +226,8 @@
 @header-login-profileLink-textColor: @header-login-blocks-textColor;
 @header-login-dropdown-background: #fff;
 @header-login-dropdown-border: @border-width solid @borderColor;
+@header-login-profileLink-margin: 0 2*@w 0 0;
+@header-login-usernameLink-maxWidth: 140*@w;
 @header-login-dropdown-subLi-height: 10px;
 @header-login-dropdown-link-padding: 2*@h 6*@w; 
 @header-login-settings-borderLeftWidth: @border-width;
@@ -296,7 +298,6 @@
 @tablesPanel-table-line-shadowColor: #c2c2c2;//rgba(0, 0, 0, 11%);
 @tablesPanel-table-line-margin : 0 0 @h*2 0;
 @tablesPanel-table-currentLine-arrow-width: 20px;
-@tablesPanel-table-currentLine-arrow-bg: "arrow-current.png";
 @tablesPanel-table-currentLine-background: #fff;
 @tablesPanel-table-currentLine-border:1px solid @tablesPanel-table-line-shadowColor;
 @tablesPanel-table-currentLine-shadow-background: "shadow-list-current.png";
@@ -406,7 +407,6 @@
 
 
 @filtersPanel-filtersCurrent-background: @tablesPanel-bgColor;
-@filtersPanel-filtersCurrent-bgArrow: "arrow-current.png";
 @filtersPanel-filtersCurrent-positionRight: -20px;
 @filtersPanel-filtersCurrent-link-textColor: @secondAccentColor;
 @filtersPanel-filtersCurrent-width: 30px;
@@ -1018,7 +1018,7 @@
 @form-datepicker-week-bg: #fff;
 @form-datepicker-week-border: none;
 @form-datepicker-week-txtColor: #b4b3b3;
-@form-datepicker-dayDisabled-textDecoration: line-through;
+@form-datepicker-dayDisabled-textDecoration: template-through;
 // ----------------------------------------------------------------------------
 // popup
 // ----------------------------------------------------------------------------

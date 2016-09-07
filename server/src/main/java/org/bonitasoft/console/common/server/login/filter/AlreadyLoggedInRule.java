@@ -17,21 +17,22 @@
 
 package org.bonitasoft.console.common.server.login.filter;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
 import org.bonitasoft.console.common.server.login.HttpServletRequestAccessor;
-import org.bonitasoft.console.common.server.login.LoginManager;
 import org.bonitasoft.console.common.server.login.TenantIdAccessor;
-import org.bonitasoft.console.common.server.preferences.properties.PropertiesFactory;
+import org.bonitasoft.console.common.server.utils.SessionUtil;
 import org.bonitasoft.engine.session.APISession;
 import org.bonitasoft.web.rest.model.user.User;
 import org.bonitasoft.web.toolkit.server.utils.LocaleUtils;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-
-public class AlreadyLoggedInRule implements AuthorizationRule {
+public class AlreadyLoggedInRule extends AuthenticationRule {
 
     @Override
-    public boolean doAuthorize(HttpServletRequestAccessor request, TenantIdAccessor tenantIdAccessor) {
+    public boolean doAuthorize(final HttpServletRequestAccessor request, HttpServletResponse response, final TenantIdAccessor tenantIdAccessor) throws ServletException {
         if (isUserAlreadyLoggedIn(request, tenantIdAccessor)) {
             ensureUserSession(request.asHttpServletRequest(),
                     request.getHttpSession(),
@@ -44,30 +45,23 @@ public class AlreadyLoggedInRule implements AuthorizationRule {
     /**
      * Overridden is Subscription
      */
-    protected boolean isUserAlreadyLoggedIn(HttpServletRequestAccessor request, TenantIdAccessor tenantIdAccessor) {
+    protected boolean isUserAlreadyLoggedIn(final HttpServletRequestAccessor request, final TenantIdAccessor tenantIdAccessor) throws ServletException {
         return request.getApiSession() != null;
     }
 
     private void ensureUserSession(final HttpServletRequest request, final HttpSession session, final APISession apiSession) {
-        if (session.getAttribute(LoginManager.USER_SESSION_PARAM_KEY) == null) {
+        if (session.getAttribute(SessionUtil.USER_SESSION_PARAM_KEY) == null) {
             reCreateUser(request, session, apiSession);
         }
     }
 
     private void reCreateUser(final HttpServletRequest request, final HttpSession session, final APISession apiSession) {
         final String locale = getLocale(request);
-        User user = new User(apiSession.getUserName(), locale);
-        user.setUseCredentialTransmission(useCredentialsTransmission(apiSession));
-        session.setAttribute(LoginManager.USER_SESSION_PARAM_KEY, user);
+        final User user = new User(apiSession.getUserName(), locale);
+        session.setAttribute(SessionUtil.USER_SESSION_PARAM_KEY, user);
     }
 
     private String getLocale(final HttpServletRequest request) {
         return LocaleUtils.getUserLocale(request);
-    }
-
-    // protected for test stubbing
-    protected boolean useCredentialsTransmission(final APISession apiSession) {
-        return PropertiesFactory.getSecurityProperties(apiSession.getTenantId())
-                .useCredentialsTransmission();
     }
 }

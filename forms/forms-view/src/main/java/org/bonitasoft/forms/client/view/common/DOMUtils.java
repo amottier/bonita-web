@@ -5,12 +5,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -24,17 +24,20 @@ import java.util.Map.Entry;
 
 import org.bonitasoft.forms.client.model.HeadNode;
 
+import com.google.gwt.dom.client.Document;
+import com.google.gwt.dom.client.Node;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Element;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.CheckBox;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HTMLPanel;
 import com.google.gwt.user.client.ui.RootPanel;
 
 /**
  * Utility Class form DOM manipulation
- * 
+ *
  * @author Anthony Birembaut
  */
 public class DOMUtils {
@@ -58,6 +61,21 @@ public class DOMUtils {
      * Id of the element of the form frame
      */
     public static final String FORM_FRAME_ID = "bonitaframe";
+
+    /**
+     * action type for postMessage to notify parent frame
+     */
+    public static final String START_PROCESS_ACTION_FOR_NOTIF = "Start process";
+
+    /**
+     * action type for postMessage to notify parent frame
+     */
+    public static final String SUBMIT_TASK_ACTION_FOR_NOTIF = "Submit task";
+
+    /**
+     * data form success value for parent frame notification
+     */
+    public static final String FORM_SUBMITTED_MESSAGE = "{\"version\":\"6.x\"}";
 
     /**
      * Instance attribute
@@ -85,7 +103,7 @@ public class DOMUtils {
 
     /**
      * Deals with the whole page template injection
-     * 
+     *
      * @param headNodes
      * @param pageHTMLPanel
      * @param bodyAttributes
@@ -142,14 +160,21 @@ public class DOMUtils {
                 if (isHeadNodeUseful(headNode)) {
                     if (!isContainHeadNode(headElement, headNode)) {
                         // removeOldHeaderElementIfPresent(headElement, headNode);
-                        final Element headChildElement = DOM.createElement(headNode.getTagName());
-                        for (final Entry<String, String> attributeEntry : headNode.getAttributes().entrySet()) {
-                            headChildElement.setAttribute(attributeEntry.getKey(), attributeEntry.getValue());
+                        if (headNode.getTagName() == null) {
+                            //for comment nodes
+                            final Node textNode = Document.get().createTextNode(headNode.getInnerHtml());
+                            headElement.appendChild(textNode);
+                        } else {
+                            //for other nodes
+                            final Element headChildElement = DOM.createElement(headNode.getTagName());
+                            for (final Entry<String, String> attributeEntry : headNode.getAttributes().entrySet()) {
+                                headChildElement.setAttribute(attributeEntry.getKey(), attributeEntry.getValue());
+                            }
+                            if (headNode.getInnerHtml() != null && headNode.getInnerHtml().length() > 0) {
+                                headChildElement.setInnerText(headNode.getInnerHtml());
+                            }
+                            headElement.appendChild(headChildElement);
                         }
-                        if (headNode.getInnerHtml() != null && headNode.getInnerHtml().length() > 0) {
-                            headChildElement.setInnerText(headNode.getInnerHtml());
-                        }
-                        headElement.appendChild(headChildElement);
                     }
                     if ("title".equalsIgnoreCase(headNode.getTagName())) {
                         Window.setTitle(headNode.getInnerHtml());
@@ -161,7 +186,7 @@ public class DOMUtils {
 
     private boolean isContainHeadNode(final Element headElement, final HeadNode headNode) {
         boolean isContained = false;
-        final Map<String, String> attribeteMap = headNode.getAttributes();
+        final Map<String, String> attributeMap = headNode.getAttributes();
         final String headInnerHtml = headNode.getInnerHtml();
         final int childrenCount = DOM.getChildCount(headElement);
         for (int i = 0; i < childrenCount; i++) {
@@ -169,7 +194,7 @@ public class DOMUtils {
 
             boolean isSameNode = true;
             int theIndex = 0;
-            if (headNode.getTagName().equalsIgnoreCase(childElement.getTagName())) {
+            if (headNode.getTagName() != null && headNode.getTagName().equalsIgnoreCase(childElement.getTagName())) {
                 final String childElementValue = childElement.getInnerHTML();
                 boolean innerHtml = false;
                 if (headInnerHtml == null && childElementValue == null) {
@@ -180,7 +205,7 @@ public class DOMUtils {
                     }
                 }
                 if (innerHtml) {
-                    for (final Entry<String, String> attributeEntry : attribeteMap.entrySet()) {
+                    for (final Entry<String, String> attributeEntry : attributeMap.entrySet()) {
                         if (!isSameNode) {
                             break;
                         }
@@ -196,7 +221,7 @@ public class DOMUtils {
 
                     }
                 }
-                if (theIndex == attribeteMap.size()) {
+                if (theIndex == attributeMap.size()) {
                     isContained = true;
                     break;
                 }
@@ -207,7 +232,7 @@ public class DOMUtils {
 
     /**
      * Deals with the whole application template injection
-     * 
+     *
      * @param headNodes
      * @param applicationHTMLPanel
      * @param bodyAttributes
@@ -289,7 +314,7 @@ public class DOMUtils {
 
     /**
      * Replace the content of the body by the template body
-     * 
+     *
      * @param applicationHTMLPanel
      * @param elementId
      */
@@ -306,7 +331,7 @@ public class DOMUtils {
 
     /**
      * Replace the content of the body by the template body
-     * 
+     *
      * @param pageHTMLPanel
      * @param processHTMLPanel
      * @param elementId
@@ -326,7 +351,7 @@ public class DOMUtils {
 
     /**
      * Add the body attributes
-     * 
+     *
      * @param bodyAttributes
      * @return the onload attribute value if it exists, null otherwise
      */
@@ -381,7 +406,7 @@ public class DOMUtils {
      */
     protected boolean isHeadNodeUseful(final HeadNode headNode) {
 
-        if (headNode.getTagName().equalsIgnoreCase("meta")) {
+        if (headNode.getTagName() != null && headNode.getTagName().equalsIgnoreCase("meta")) {
             final Map<String, String> attributes = headNode.getAttributes();
             if (attributes.get("http-equiv") != null && attributes.get("http-equiv").equalsIgnoreCase("content-type")) {
                 return false;
@@ -392,14 +417,14 @@ public class DOMUtils {
 
     /**
      * Remove an element of the entry point header if it's present in the template (only for certain elements)
-     * 
+     *
      * @param parentElement
      * @param headNode
      */
     protected void removeOldHeaderElementIfPresent(final Element parentElement, final HeadNode headNode) {
 
         final int headChildrenCount = DOM.getChildCount(parentElement);
-        if (headNode.getTagName().equalsIgnoreCase("title")) {
+        if (headNode.getTagName() != null && headNode.getTagName().equalsIgnoreCase("title")) {
             for (int i = 0; i < headChildrenCount; i++) {
                 final Element headChildElement = DOM.getChild(parentElement, i);
                 if (headNode.getTagName().equalsIgnoreCase(headChildElement.getTagName())) {
@@ -412,7 +437,7 @@ public class DOMUtils {
 
     /**
      * insert a content inside an element
-     * 
+     *
      * @param htmlPanel
      * @param pageLabelElementId
      * @param pageLabel
@@ -424,7 +449,7 @@ public class DOMUtils {
 
     /**
      * insert a content inside an element
-     * 
+     *
      * @param htmlPanel
      * @param pageLabelElementId
      * @param pageLabel
@@ -454,7 +479,7 @@ public class DOMUtils {
 
     /**
      * Remove the required element from the body and remove its css classes
-     * 
+     *
      * @param elementToRemoveId
      */
     public void cleanBody(final String elementToRemoveId) {
@@ -469,7 +494,7 @@ public class DOMUtils {
     /**
      * Indicates whether the page is in a frame or not this method is meant to be called in the form frame (not in the
      * application window)
-     * 
+     *
      * @return true if the page is in a frame
      */
     native public boolean isPageInFrame()
@@ -477,14 +502,69 @@ public class DOMUtils {
         var applicationWindow = window.parent;
         if (applicationWindow == window.top) {
             return false;
-        } else {	
+        } else {
             return true;
         }
     }-*/;
 
     /**
+     * Resolve the action attribute of the postMessage to send to notify the parent frame
+     *
+     * @param urlContext
+     * @return
+     */
+    public String getActionForNotif(final Map<String, Object> urlContext) {
+        String actionForNotif;
+        if (urlContext.containsKey(URLUtils.TASK_ID_PARAM)) {
+            actionForNotif = DOMUtils.SUBMIT_TASK_ACTION_FOR_NOTIF;
+        } else if (urlContext.containsKey(URLUtils.PROCESS_ID_PARAM)) {
+            actionForNotif = DOMUtils.START_PROCESS_ACTION_FOR_NOTIF;
+        } else {
+            actionForNotif = "";
+        }
+        return actionForNotif;
+    }
+
+    /**
+     * Indicates to the parent frame that a form was submitted
+     *
+     * @param action
+     */
+    public void notifyParentFrameSuccess(final String action) {
+        notifyParentFrame(FORM_SUBMITTED_MESSAGE, action, false);
+    }
+
+    /**
+     * Indicates to the parent frame that a form was submitted (and if the response was success or error)
+     *
+     * @param error error message
+     * @param action
+     */
+    public void notifyParentFrameError(final String error, final String action) {
+        notifyParentFrame("\"" + error + "\"", action, true);
+    }
+
+    /**
+     * Indicates to the parent frame that a form was submitted (and if the response was success or error)
+     *
+     * @param data
+     * @param action
+     * @param isError
+     */
+    native public void notifyParentFrame(String data, String action, boolean isError)
+    /*-{
+        var dataToSend;
+        if(isError) {
+            dataToSend = '{"message":"error","action":"' + action + '","dataFromError":' + data + '}';
+        } else {
+            dataToSend = '{"message":"success","action":"' + action + '","dataFromSuccess":' + data + '}';
+        }
+        $wnd.parent.postMessage(dataToSend, '*');
+    }-*/;
+
+    /**
      * Override the web browser native inputs if the js to do so is present
-     * 
+     *
      * @return true if the Javascript was applied
      */
     native public boolean overrideBrowserNativeInputs()
@@ -499,8 +579,25 @@ public class DOMUtils {
     }-*/;
 
     /**
+     * Override a checkbox or radiobuton behavior after it is checked or unchecked
+     *
+     * @param checbox
+     * @param checked
+     */
+    public void overrideNativeInputAfterUpdate(final CheckBox checbox, final boolean checked) {
+        final NodeList<com.google.gwt.dom.client.Element> labelNodes = checbox.getElement().getElementsByTagName("label");
+        if (labelNodes.getLength() > 0) {
+            if (checked) {
+                labelNodes.getItem(0).addClassName("checked");
+            } else {
+                labelNodes.getItem(0).removeClassName("checked");
+            }
+        }
+    }
+
+    /**
      * perform a Javascript evaluation
-     * 
+     *
      * @param jsSourceCode
      *            the source code to execute
      */
@@ -511,7 +608,7 @@ public class DOMUtils {
 
     /**
      * To make script in scriptElements work , need to add script elements in the currentElement to parentElement
-     * 
+     *
      * @param currentElement
      * @param parentElement
      */
@@ -571,7 +668,7 @@ public class DOMUtils {
         theElement = DOM.getElementById("loading");
         if (theElement != null) {
             theElement.getStyle().setProperty("display", "table");
-            theElement.getStyle().setProperty("zIndex", "999");
+
         }
     }
 

@@ -107,12 +107,12 @@ public class ArchivedCommentDatastore extends CommonDatastore<ArchivedCommentIte
      * @param builder
      */
     private void adjustSearchBuilder(final Map<String, String> filters, final SearchOptionsBuilder builder) {
-        addFilterToSearchBuilder(filters, builder, ArchivedCommentItem.ATTRIBUTE_PROCESS_INSTANCE_ID, ArchivedCommentsSearchDescriptor.PROCESS_INSTANCE_ID);
+        addStringFilterToSearchBuilder(filters, builder, ArchivedCommentItem.ATTRIBUTE_PROCESS_INSTANCE_ID, ArchivedCommentsSearchDescriptor.PROCESS_INSTANCE_ID);
     }
 
     /*
      * (non-Javadoc)
-     * @see org.bonitasoft.console.server.datastore.bpm.CommonDatastore#convertEngineToConsoleItem(java.io.Serializable)
+     * @see org.bonitasoft.console.server.credentials.bpm.CommonDatastore#convertEngineToConsoleItem(java.io.Serializable)
      */
     @Override
     protected ArchivedCommentItem convertEngineToConsoleItem(final ArchivedComment item) {

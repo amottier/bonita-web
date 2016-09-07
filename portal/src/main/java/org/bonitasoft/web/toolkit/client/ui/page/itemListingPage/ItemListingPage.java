@@ -5,12 +5,10 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 2.0 of the License, or
  * (at your option) any later version.
- * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -46,16 +44,20 @@ import org.bonitasoft.web.toolkit.client.ui.component.menu.Menu;
 import org.bonitasoft.web.toolkit.client.ui.component.menu.MenuFolder;
 import org.bonitasoft.web.toolkit.client.ui.component.menu.MenuLink;
 import org.bonitasoft.web.toolkit.client.ui.component.table.ItemTable;
+import org.bonitasoft.web.toolkit.client.ui.component.table.ItemTableLoadedHandler;
 import org.bonitasoft.web.toolkit.client.ui.component.table.Table.VIEW_TYPE;
 import org.bonitasoft.web.toolkit.client.ui.component.table.TableColumn;
+import org.bonitasoft.web.toolkit.client.ui.html.HTML;
 import org.bonitasoft.web.toolkit.client.ui.page.ItemQuickDetailsPage.ItemQuickDetailsPage;
 import org.bonitasoft.web.toolkit.client.ui.utils.Url;
 
+import com.google.gwt.user.client.DOM;
+import com.google.gwt.user.client.Element;
+
 /**
  * @author Séverin Moussel, Paul Amar
- * 
  * @param <T>
- *            The class of the items that will be displayed in this page.
+ *        The class of the items that will be displayed in this page.
  */
 public abstract class ItemListingPage<T extends IItem> extends Page {
 
@@ -83,6 +85,8 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
      * The search form for all tables.
      */
     protected final Form tablesSearch = new Form(new JsId("search"));
+
+    private ChangeFilterAction firstFilterAction;
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // CONSTRUCTOR
@@ -189,7 +193,6 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
         initFilterPanelActions();
         initPrimaryFilters();
         initSecondaryFilters();
-        initResourceFilters();
 
         if (hasParameter(UrlOption.FILTER) && ItemListingPage.this.filtersLinks.containsKey(getParameter(UrlOption.FILTER))) {
             selectFilter(getParameter(UrlOption.FILTER));
@@ -197,10 +200,13 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
             selectFirstFilter();
         }
 
+        initResourceFilters();
     }
 
     void selectFirstFilter() {
-        $(ItemListingPage.this.filtersLinks.values().iterator().next().getElement()).click();
+        if (firstFilterAction != null) {
+            firstFilterAction.execute(true);
+        }
     }
 
     /**
@@ -220,7 +226,7 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
     /**
      * Define the filters that will displayed as most important.
-     * 
+     *
      * @return This method must return the list of filters to display in the right display order
      */
     protected List<Clickable> defineFilterPanelActions() {
@@ -240,14 +246,14 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
     /**
      * Define the filters that will displayed as most important.
-     * 
+     *
      * @return This method must return the list of filters to display in the right display order
      */
     protected abstract LinkedList<ItemListingFilter> definePrimaryFilters();
 
     /**
      * (OPTIONAL) Define title of the primary filters section
-     * 
+     *
      * @return This method can return the title of the section. If null then no text will be added
      */
     protected Title definePrimaryFiltersTitle() {
@@ -271,7 +277,7 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
     /**
      * (OPTIONAL) Define the filters that will displayed as less important.
-     * 
+     *
      * @return This method must return the list of filters to display in the right display order
      */
     protected LinkedList<ItemListingFilter> defineSecondaryFilters() {
@@ -280,7 +286,7 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
     /**
      * (OPTIONAL) Define title of the secondary filters section
-     * 
+     *
      * @return This method can return the title of the section. If null then no text will be added
      */
     protected Title defineSecondaryFiltersTitle() {
@@ -302,20 +308,20 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
         this.resourceFilters = new Section(new JsId("resource_filters"));
         this.filtersPanel.addBody(this.resourceFilters);
 
-        ResourceFilterFiller<T> filler = new ResourceFilterFiller<T>(this, filter);
+        final ResourceFilterFiller<T> filler = new ResourceFilterFiller<T>(this, filter);
         this.resourceFilters.addFiller(filler);
     }
 
     /**
      * Define the filters automatically filled with items from a linked resource.
-     * 
+     *
      * @return This method must return the definition of a resource dependent filters list
      */
     protected abstract ItemListingResourceFilter defineResourceFilters();
 
     /**
      * (OPTIONAL) Define title of the resource filters section
-     * 
+     *
      * @return This method can return the title of the section. If null then no text will be added
      */
     protected Title defineResourceFiltersTitle() {
@@ -324,49 +330,60 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
     /**
      * Add filters to a defined section.
-     * 
+     *
      * @param filters
-     *            The filters to add
+     *        The filters to add
      * @param section
-     *            The section to fill with filters
+     *        The section to fill with filters
      */
     private void addLinkFilters(final List<ItemListingFilter> filters, final Section section) {
         for (final ItemListingFilter filter : filters) {
-
             final ChangeFilterAction action = new ChangeFilterAction(filter);
-
-            final Link link = new Link(
-                    new JsId(filter.getName().toLowerCase()),
-                    filter.getLabel(),
-                    filter.getTooltip(),
-                    action
-                    );
-            action.setLink(link);
-            filter.setLink(link);
-
-            if (filter.getImageUrl() != null) {
-                final Image image = new Image(new Url("css/transparent.gif"), FILTERS_ICON_SIZE, FILTERS_ICON_SIZE, filter.getTooltip());
-                if (filter.getImageUrl().isEmpty()) {
-                    image.addClass("empty");
-                    link.setImage(image);
-                } else {
-                    link.setImage(new Image(filter.getImageUrl(), FILTERS_ICON_SIZE, FILTERS_ICON_SIZE, filter.getTooltip()));
-                }
-            }
-
+            final Link link = createLinkFilter(filter, action);
             section.addBody(link);
-            this.filtersLinks.put(filter.getName(), link);
-
+            filtersLinks.put(filter.getName(), link);
+            if (firstFilterAction == null) {
+                firstFilterAction = action;
+            }
         }
+    }
+
+    private Link createLinkFilter(final ItemListingFilter filter, final ChangeFilterAction action) {
+        final Link link = new Link(
+                new JsId(filter.getName().toLowerCase()),
+                filter.getLabel(),
+                filter.getTooltip() + (filter.hasAdditionnalInfo() ? " " + filter.getAdditionnalInfo() : ""),
+                action
+                );
+        link.forceToolTip();
+        action.setLink(link);
+        filter.setLink(link);
+
+        if (filter.hasAdditionnalInfo()) {
+            final Element span = DOM.createSpan();
+            span.setInnerText(filter.getAdditionnalInfo());
+            HTML.append(link.getElement(), span);
+        }
+
+        if (filter.getImageUrl() != null) {
+            final Image image = new Image(new Url("css/transparent.gif"), FILTERS_ICON_SIZE, FILTERS_ICON_SIZE, filter.getTooltip());
+            if (filter.getImageUrl().isEmpty()) {
+                image.addClass("empty");
+                HTML.prepend(link.getElement(), image.getElement());
+            } else {
+                HTML.prepend(link.getElement(), new Image(filter.getImageUrl(), FILTERS_ICON_SIZE, FILTERS_ICON_SIZE, filter.getTooltip()).getElement());
+            }
+        }
+        return link;
     }
 
     /**
      * Add title to the header of the section
-     * 
+     *
      * @param title
-     *            Title to add
+     *        Title to add
      * @param section
-     *            Section where the title will be added
+     *        Section where the title will be added
      */
     public void addTitleToSection(final Title title, final Section section) {
         if (title != null) {
@@ -383,8 +400,12 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
     }
 
     void selectFilter(final String filterId) {
-        final Link defaultFilterLink = this.filtersLinks.get(filterId);
-        $(defaultFilterLink.getElement()).click();
+        if(filtersLinks.containsKey(filterId)) {
+            final Action action = filtersLinks.get(filterId).getAction();
+            if(action instanceof ItemListingPage<?>.ChangeFilterAction) {
+                ((ChangeFilterAction) action).execute(true);
+            }
+        }
     }
 
     /**
@@ -394,9 +415,8 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
         /**
          * The action called to sort the tables.
-         * 
+         *
          * @author Paul AMAR
-         * 
          */
         private final class ChangeSortAction extends Action {
 
@@ -409,9 +429,9 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
             /**
              * Default Constructor.
-             * 
+             *
              * @param sort
-             *            The column to sort
+             *        The column to sort
              */
             private ChangeSortAction(final TableColumn sort, final boolean desc) {
                 this.sort = sort;
@@ -442,9 +462,9 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
         /**
          * Default constructor.
-         * 
+         *
          * @param filter
-         *            The filter to display
+         *        The filter to display
          */
         public ChangeFilterAction(final ItemListingFilter filter) {
             this.filter = filter;
@@ -452,7 +472,7 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
         /**
          * @param link
-         *            the link to set
+         *        the link to set
          */
         public void setLink(final Link link) {
             this.link = link;
@@ -463,13 +483,20 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
          */
         @Override
         public void execute() {
+            execute(false);
+        }
+
+        public void execute(final boolean quiet) {
             $(ItemListingPage.this.detailsPanel.getElement()).empty();
 
             // URL update
             ClientApplicationURL.removeAttribute(UrlOption.RESOURCE_FILTER);
             ClientApplicationURL.removeAttribute(UrlOption.FILTER);
             ClientApplicationURL.addAttribute(this.filter.isResourceFilter() ? UrlOption.RESOURCE_FILTER : UrlOption.FILTER, this.filter.getName());
-            ClientApplicationURL.refreshUrl(false);
+
+            if (!quiet) {
+                ClientApplicationURL.refreshUrl(false);
+            }
 
             ItemListingPage.this.currentFilter = this.filter;
 
@@ -484,9 +511,9 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
         /**
          * Show a table defined by its name.
-         * 
+         *
          * @param tableName
-         *            The name of the table to show
+         *        The name of the table to show
          */
         private void showTable(final String tableName) {
             $(ItemListingPage.this.tables.get(tableName).getElement()).show();
@@ -502,9 +529,9 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
         /**
          * Hide a table defined by its name.
-         * 
+         *
          * @param tableName
-         *            The name of the table to hide
+         *        The name of the table to hide
          */
         @SuppressWarnings("unused")
         private void hideTable(final String tableName) {
@@ -545,11 +572,11 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
                 // Reset
                 itemTable
-                        .resetLines()
-                        .resetHiddenFilters()
-                        .addHiddenFilters(ItemListingPage.this.tables.get(tableName).getDefaultHiddenFilters())
-                        .addHiddenFilters(this.filter.getAdditionalFilters())
-                        .setPage(0);
+                .resetLines()
+                .resetHiddenFilters()
+                .addHiddenFilters(ItemListingPage.this.tables.get(tableName).getDefaultHiddenFilters())
+                .addHiddenFilters(this.filter.getAdditionalFilters())
+                .setPage(0);
 
                 // Default selected line
                 itemTable.setDefaultSelectedLine(0);
@@ -624,19 +651,19 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
         if (this.showSearchBar) {
 
             this.tablesSearch
-                    .addTextEntryWithPlaceholder(new JsId("query"), "", _("Enter the text to search for"), _("Search..."))
-                    .addButton(new JsId("search"), _("Search"), _("Update this page using the defined search query"), new FormAction() {
+            .addTextEntryWithPlaceholder(new JsId("query"), "", _("Enter the text to search for"), _("Search..."))
+            .addButton(new JsId("search"), _("Search"), _("Update this page using the defined search query"), new FormAction() {
 
-                        @Override
-                        public void execute() {
-                            for (final String tableName : ItemListingPage.this.currentFilter.getTablesToDisplay()) {
-                                final ItemTable table = ItemListingPage.this.tables.get(tableName).getItemTable();
-                                table.setSearch(this.getParameter("query"));
-                                table.setPage(0);
-                                table.refresh();
-                            }
-                        }
-                    });
+                @Override
+                public void execute() {
+                    for (final String tableName : ItemListingPage.this.currentFilter.getTablesToDisplay()) {
+                        final ItemTable table = ItemListingPage.this.tables.get(tableName).getItemTable();
+                        table.setSearch(this.getParameter("query"));
+                        table.setPage(0);
+                        table.refresh();
+                    }
+                }
+            });
         }
 
     }
@@ -649,7 +676,7 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
         menuSorts.addJsOption("selectMode", true).addJsOption("align", "right");
         tablesPanel.addHeader(sortMenu);
 
-        for (ItemListingTable itemListingTable : defineTables()) {
+        for (final ItemListingTable itemListingTable : defineTables()) {
 
             itemListingTable.getItemTable().setFillOnRefresh(false);
             itemListingTable.getItemTable().setFillOnLoad(false);
@@ -668,6 +695,31 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
             // Add quickDetailsAction
             table.setDefaultAction(new UpdateQuickDetailsAction<T>(this, itemListingTable));
+
+            itemListingTable.getItemTable().addItemTableLoadedHandler(new ItemTableLoadedHandler() {
+
+                @Override
+                public void onItemsLoaded(final List<IItem> items) {
+                    if (items.size() > 0) {
+                        int itemRowIndex = 0;
+                        final ItemTable table = itemListingTable.getItemTable();
+                        if(table.getDefaultSelectedId() != null) {
+                            for (; itemRowIndex < items.size(); itemRowIndex++) {
+                                if (table.getDefaultSelectedId().equals(items.get(itemRowIndex).getId())) {
+                                    break;
+                                }
+                            }
+                            if (itemRowIndex == items.size()) {
+                                itemRowIndex = 0;
+                            }
+                        }
+                        updateQuickDetailPanel(itemListingTable.getQuickDetailsPage(), String.valueOf(items.get(itemRowIndex).getId()), true);
+                        // My heart bleed while writing thus lines :'(
+                        $(".tr", table.getElement()).removeClass("current");
+                        $(".tr_" + String.valueOf(itemRowIndex + 1), table.getElement()).addClass("current");
+                    }
+                }
+            });
         }
 
         // add the table Search
@@ -675,7 +727,7 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
         this.tablesPanel.addHeader(this.tablesSearch);
     }
 
-    private void sortTable(final ItemTable table, ItemListingSort itemListingSort) {
+    private void sortTable(final ItemTable table, final ItemListingSort itemListingSort) {
         if (table.getOrder() == null && itemListingSort != null) {
             table.setOrder(itemListingSort.getSortName(), itemListingSort.isSortAscending());
         }
@@ -683,7 +735,7 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
     /**
      * Define the default sorting.
-     * 
+     *
      * @return This method must return the default sort that must be used.
      * @deprecated don't add sort order on page but on tables, use {@link ItemTable#setOrder(String, boolean)}
      */
@@ -694,17 +746,19 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
 
     /**
      * Define the list of tables that can be displayed by filters.
-     * 
+     *
      * @return This method must return a list of ItemListingTable
      */
     protected abstract LinkedList<ItemListingTable> defineTables();
 
-    public void updateQuickDetailPanel(ItemQuickDetailsPage<?> itemQuickDetailsPage, String itemId) {
+    public void updateQuickDetailPanel(final ItemQuickDetailsPage<?> itemQuickDetailsPage, final String itemId, final boolean quiet) {
         final TreeIndexed<String> params = itemQuickDetailsPage.getParameters();
         params.addValue("id", itemId);
 
         ClientApplicationURL.addAttribute("_id", itemId);
-        ClientApplicationURL.refreshUrl(false);
+        if (!quiet) {
+            ClientApplicationURL.refreshUrl(false);
+        }
         ViewController.showView(itemQuickDetailsPage.getToken(), detailsPanel.getElement(), params);
     }
 
@@ -731,13 +785,13 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
         // Refresh middle tables
 
         for (final String tableName : this.getCurrentFilter().getTablesToDisplay()) {
-            final ItemTable table = this.tables.get(tableName).getItemTable();
+            final ItemListingTable table = this.tables.get(tableName);
 
             final String idInUrl = ClientApplicationURL.getPageAttributes().getValue("_id");
             if (idInUrl != null) {
-                table.setDefaultSelectedId(APIID.makeAPIID(idInUrl));
+                table.getItemTable().setDefaultSelectedId(APIID.makeAPIID(idInUrl));
             }
-            table.refresh();
+            table.getItemTable().refresh();
         }
 
         // Refresh details panel if necessary
@@ -749,8 +803,6 @@ public abstract class ItemListingPage<T extends IItem> extends Page {
     void selectRightResourceFilter() {
         if (hasResourceFilterParameter()) {
             selectFilter(getParameter(UrlOption.RESOURCE_FILTER));
-        } else if (!hasParameter(UrlOption.FILTER)) {
-            selectFirstFilter();
         }
     }
 

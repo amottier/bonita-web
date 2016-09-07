@@ -228,12 +228,12 @@ public class CommentDatastore extends CommonDatastore<CommentItem, Comment> impl
      * @param builder
      */
     private void adjustSearchBuilder(final Map<String, String> filters, final SearchOptionsBuilder builder) {
-        addFilterToSearchBuilder(filters, builder, CommentItem.ATTRIBUTE_PROCESS_INSTANCE_ID, SearchCommentsDescriptor.PROCESS_INSTANCE_ID);
+        addStringFilterToSearchBuilder(filters, builder, CommentItem.ATTRIBUTE_PROCESS_INSTANCE_ID, SearchCommentsDescriptor.PROCESS_INSTANCE_ID);
     }
 
     /*
      * (non-Javadoc)
-     * @see org.bonitasoft.console.server.datastore.bpm.CommonDatastore#convertEngineToConsoleItem(java.io.Serializable)
+     * @see org.bonitasoft.console.server.credentials.bpm.CommonDatastore#convertEngineToConsoleItem(java.io.Serializable)
      */
     @Override
     protected CommentItem convertEngineToConsoleItem(final Comment engineItem) {

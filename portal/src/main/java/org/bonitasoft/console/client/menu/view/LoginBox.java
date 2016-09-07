@@ -32,6 +32,7 @@ import org.bonitasoft.web.rest.model.portal.profile.ProfileItem;
 import org.bonitasoft.web.toolkit.client.ApplicationFactoryClient;
 import org.bonitasoft.web.toolkit.client.AvailableTokens;
 import org.bonitasoft.web.toolkit.client.ClientApplicationURL;
+import org.bonitasoft.web.toolkit.client.ParameterStorageWithSessionStorage;
 import org.bonitasoft.web.toolkit.client.Session;
 import org.bonitasoft.web.toolkit.client.ViewController;
 import org.bonitasoft.web.toolkit.client.common.UrlBuilder;
@@ -104,7 +105,7 @@ public class LoginBox extends RawView {
     /**
      * Overridden in SP
      */
-    protected LogoutUrl getLogOutUrl(String locale) {
+    protected LogoutUrl getLogOutUrl(final String locale) {
         return new LogoutUrl(new UrlBuilder(), locale);
     }
 
@@ -127,23 +128,24 @@ public class LoginBox extends RawView {
     protected Container<AbstractComponent> createGreetings() {
         return new Container<AbstractComponent>(new JsId("userData"))
                 .append(createUserNameMenu().addClass("userName"))
-                .append(this.userNameAvatar.addClass("userAvatar"));
+                .append(userNameAvatar.addClass("userAvatar"));
     }
 
     protected void loadTechUserProfileMenu() {
-        this.userNameMenu.setLabel(getTechUserName());
+        userNameMenu.setLabel(getTechUserName());
         ViewController.showView(getTechnicalUserMenu(), NAVIGATION_MENU);
-        ViewController.showPopup(TechnicalUserWarningView.TOKEN);
+        final TechnicalUserMessageHandler handler = new TechnicalUserMessageHandler();
+        handler.check();
     }
 
-    private void addCurrentUserProfileMenu() {
-        this.userNameMenu.addFiller(new CurrentUserAvatarFiller());
-        ProfileMenuItem profileMenuItem = new ProfileMenuItem(getMenuListCreator());
+    protected void addCurrentUserProfileMenu() {
+        userNameMenu.addFiller(new CurrentUserAvatarFiller());
+        final ProfileMenuItem profileMenuItem = new ProfileMenuItem(getMenuListCreator());
         addBody(new Menu(profileMenuItem));
         getProfiles(Session.getUserId(), fillProfileMenuOnCallback(profileMenuItem));
     }
 
-    private APICallback fillProfileMenuOnCallback(final ProfileMenuItem profileMenuItem) {
+    protected APICallback fillProfileMenuOnCallback(final ProfileMenuItem profileMenuItem) {
         return new APICallback() {
 
             @Override
@@ -154,12 +156,12 @@ public class LoginBox extends RawView {
         };
     }
 
-    private void updateProfileMenu(ProfileMenuItem profileMenuItem, final List<ProfileItem> profiles) {
+    protected void updateProfileMenu(final ProfileMenuItem profileMenuItem, final List<ProfileItem> profiles) {
         if (!profiles.isEmpty()) {
-            ensureProfileId((ProfileItem) profiles.get(0));
+            ensureProfileId(profiles);
             profileMenuItem.addItems(profiles);
-            for (ProfileItem profile : profiles) {
-                if (profile.getId().toString().equals(ClientApplicationURL.getProfileId())) {
+            for (final ProfileItem profile : profiles) {
+                if (profile.getId().toString().equals(getProfileIdFromURL())) {
                     loadNavigationMenu();
                     return;
                 }
@@ -178,13 +180,37 @@ public class LoginBox extends RawView {
         new APICaller(ProfileDefinition.get()).search(0, 100, null, null, filter, callback);
     }
 
-    private void ensureProfileId(final ProfileItem profile) {
-        if (ClientApplicationURL.getProfileId() == null) {
-            ClientApplicationURL.setProfileId(profile.getId().toString());
-        } else {
-            // TODO add an entry to the browser history.. wtf?
-            ClientApplicationURL.refreshUrl(false);
+    protected void ensureProfileId(final List<ProfileItem> profiles) {
+        if (getProfileIdFromURL() == null) {
+            String profileId = getProfileIdFromStorage(profiles);
+            if (profileId == null) {
+                profileId = profiles.get(0).getId().toString();
+                setProfileIdToStorage(profileId);
+            }
+            setProfileIdToURL(profileId);
         }
+    }
+
+    protected void setProfileIdToURL(final String profileId) {
+        ClientApplicationURL.setProfileId(profileId);
+    }
+
+    protected String getProfileIdFromURL() {
+        return ClientApplicationURL.getProfileId();
+    }
+
+    protected void setProfileIdToStorage(final String profileId) {
+        ParameterStorageWithSessionStorage.setParameter(UrlOption.PROFILE, profileId);
+    }
+
+    protected String getProfileIdFromStorage(final List<ProfileItem> authorizedProfiles) {
+        final String profileIdFromStorage = ParameterStorageWithSessionStorage.getParameter(UrlOption.PROFILE);
+        for (final ProfileItem profileItem : authorizedProfiles) {
+            if (profileIdFromStorage.equals(profileItem.getId().toString())) {
+                return profileIdFromStorage;
+            }
+        }
+        return null;
     }
 
     private void loadNavigationMenu() {
@@ -212,7 +238,7 @@ public class LoginBox extends RawView {
             public void execute() {
                 Window.Location.replace(
                         getLogOutUrl(Session.getParameter(UrlOption.LANG))
-                                .toString());
+                        .toString());
             }
         });
     }
@@ -243,12 +269,12 @@ public class LoginBox extends RawView {
 
             final String displayName = new UserAttributeReader().read(user);
 
-            LoginBox.this.userNameMenu.setLabel(displayName);
+            userNameMenu.setLabel(displayName);
 
             if (!StringUtil.isBlank(user.getIcon())) {
-                LoginBox.this.userNameAvatar
-                        .setUrl(new Path(user.getIcon()))
-                        .setTooltip(displayName);
+                userNameAvatar
+                .setUrl(new Path(user.getIcon()))
+                .setTooltip(displayName);
             }
         }
     }

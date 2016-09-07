@@ -20,7 +20,6 @@ package org.bonitasoft.console.common.server.login.filter;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -30,11 +29,12 @@ import static org.mockito.MockitoAnnotations.initMocks;
 import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.bonitasoft.console.common.server.login.HttpServletRequestAccessor;
-import org.bonitasoft.console.common.server.login.LoginManager;
 import org.bonitasoft.console.common.server.login.TenantIdAccessor;
+import org.bonitasoft.console.common.server.utils.SessionUtil;
 import org.bonitasoft.engine.session.APISession;
 import org.bonitasoft.web.rest.model.user.User;
 import org.junit.Before;
@@ -64,14 +64,16 @@ public class AlreadyLoggedInRuleTest {
 
     @Mock
     HttpServletRequest httpServletRequest;
-    
+
+    @Mock
+    private HttpServletResponse response;
+
     @Spy
     AlreadyLoggedInRule rule;
 
     @Before
     public void setUp() throws Exception {
         initMocks(this);
-        doReturn(true).when(rule).useCredentialsTransmission(any(APISession.class));
         doReturn(httpSession).when(request).getHttpSession();
         doReturn(httpServletRequest).when(request).asHttpServletRequest();
     }
@@ -80,9 +82,9 @@ public class AlreadyLoggedInRuleTest {
     public void testIfRuleAuthorizeAlreadyLoggedUser() throws Exception {
         doReturn(apiSession).when(request).getApiSession();
         // ensure we won't recreate user session
-        doReturn("").when(httpSession).getAttribute(LoginManager.USER_SESSION_PARAM_KEY);
+        doReturn("").when(httpSession).getAttribute(SessionUtil.USER_SESSION_PARAM_KEY);
 
-        boolean authorization = rule.doAuthorize(request, tenantAccessor);
+        final boolean authorization = rule.doAuthorize(request, response, tenantAccessor);
 
         assertThat(authorization, is(true));
     }
@@ -91,7 +93,7 @@ public class AlreadyLoggedInRuleTest {
     public void testIfRuleDoesntAuthorizeNullSession() throws Exception {
         doReturn(null).when(request).getApiSession();
 
-        boolean authorization = rule.doAuthorize(request, tenantAccessor);
+        final boolean authorization = rule.doAuthorize(request, response, tenantAccessor);
 
         assertFalse(authorization);
     }
@@ -99,31 +101,31 @@ public class AlreadyLoggedInRuleTest {
     @Test
     public void testIfUserSessionIsRecreatedWhenMissing() throws Exception {
         doReturn(apiSession).when(request).getApiSession();
-        doReturn(null).when(httpSession).getAttribute(LoginManager.USER_SESSION_PARAM_KEY);
+        doReturn(null).when(httpSession).getAttribute(SessionUtil.USER_SESSION_PARAM_KEY);
         // configure user that will be created
         doReturn(new Locale("en")).when(httpServletRequest).getLocale();
         doReturn("myUser").when(apiSession).getUserName();
 
-        rule.doAuthorize(request, tenantAccessor);
+        rule.doAuthorize(request, response, tenantAccessor);
 
         verify(httpSession).setAttribute(
-                eq(LoginManager.USER_SESSION_PARAM_KEY),
+                eq(SessionUtil.USER_SESSION_PARAM_KEY),
                 argThat(new UserMatcher("myUser", "en")));
     }
 
     class UserMatcher extends  ArgumentMatcher<User> {
 
-        private String username;
-        private String local;
+        private final String username;
+        private final String local;
 
-        UserMatcher(String username, String local) {
+        UserMatcher(final String username, final String local) {
             this.username = username;
             this.local = local;
         }
 
         @Override
-        public boolean matches(Object arg) {
-            User user = (User) arg;
+        public boolean matches(final Object arg) {
+            final User user = (User) arg;
             return username.equals(user.getUsername())
                     && local.equals(user.getLocale().toString());
         }

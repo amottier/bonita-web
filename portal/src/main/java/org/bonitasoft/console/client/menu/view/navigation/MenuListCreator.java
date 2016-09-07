@@ -28,7 +28,10 @@ import org.bonitasoft.web.rest.model.portal.profile.ProfileEntryItem;
 import org.bonitasoft.web.toolkit.client.ClientApplicationURL;
 import org.bonitasoft.web.toolkit.client.common.util.StringUtil;
 import org.bonitasoft.web.toolkit.client.data.APIID;
+import org.bonitasoft.web.toolkit.client.eventbus.MainEventBus;
+import org.bonitasoft.web.toolkit.client.eventbus.events.MenuClickEvent;
 import org.bonitasoft.web.toolkit.client.ui.JsId;
+import org.bonitasoft.web.toolkit.client.ui.action.RedirectionAction;
 import org.bonitasoft.web.toolkit.client.ui.component.menu.MenuFolder;
 import org.bonitasoft.web.toolkit.client.ui.component.menu.MenuItem;
 import org.bonitasoft.web.toolkit.client.ui.component.menu.MenuLink;
@@ -39,9 +42,9 @@ import org.bonitasoft.web.toolkit.client.ui.component.menu.MenuLink;
  */
 public class MenuListCreator {
 
-    private final LinkedHashMap<APIID, List<ProfileEntryItem>> orphelineEntries = new LinkedHashMap<APIID, List<ProfileEntryItem>>();;
+    private final LinkedHashMap<APIID, List<ProfileEntryItem>> orphanEntries = new LinkedHashMap<APIID, List<ProfileEntryItem>>();;
 
-    public LinkedList<MenuItem> asList(final List<ProfileEntryItem> profiles) {
+    public LinkedList<MenuItem> createMenuItemList(final List<ProfileEntryItem> profiles) {
         final LinkedHashMap<APIID, MenuItem> menu = new LinkedHashMap<APIID, MenuItem>();
         for (final ProfileEntryItem profile : profiles) {
             addProfileEntry(menu, profile);
@@ -55,7 +58,7 @@ public class MenuListCreator {
         } else if (parentExist(menu, entry)) {
             getParent(menu, entry).addLink(createLink(entry));
         } else {
-            saveOrphelineEntry(entry);
+            saveOrphanEntry(entry);
         }
     }
 
@@ -84,7 +87,20 @@ public class MenuListCreator {
 
     private MenuLink createLink(final ProfileEntryItem entry) {
         saveFirstPageMet(entry);
-        return new MenuLink(createJsId(entry), _(getLinkName(entry)), _(entry.getDescription()), getEntryUrlToken(entry));
+        final String token = getEntryUrlToken(entry);
+        //For default portal link label, translation see the class "ProfileEntriesI18N.java"
+        return new MenuLink(
+                createJsId(entry),
+                _(getLinkName(entry)),
+                _(entry.getDescription()),
+                new RedirectionAction(token) {
+
+                    @Override
+                    public void execute() {
+                        MainEventBus.getInstance().fireEvent(new MenuClickEvent(token));
+                        super.execute();
+                    }
+                });
     }
 
     private JsId createJsId(final ProfileEntryItem entry) {
@@ -96,8 +112,9 @@ public class MenuListCreator {
     }
 
     private MenuItem createFolder(final ProfileEntryItem entry) {
+        //For default portal menu label, see the class "ProfileEntriesI18N.java"
         final MenuFolder folder = new MenuFolder(new JsId(entry.getName()), _(entry.getName()));
-        adoptOrphelineEntries(folder, entry);
+        adoptOrphanEntries(folder, entry);
         return folder;
     }
 
@@ -107,17 +124,17 @@ public class MenuListCreator {
         }
     }
 
-    private void saveOrphelineEntry(final ProfileEntryItem entry) {
-        if (!orphelineEntries.containsKey(entry.getParentId())) {
-            orphelineEntries.put(entry.getParentId(), new LinkedList<ProfileEntryItem>());
+    private void saveOrphanEntry(final ProfileEntryItem entry) {
+        if (!orphanEntries.containsKey(entry.getParentId())) {
+            orphanEntries.put(entry.getParentId(), new LinkedList<ProfileEntryItem>());
         }
-        orphelineEntries.get(entry.getParentId()).add(entry);
+        orphanEntries.get(entry.getParentId()).add(entry);
     }
 
-    private void adoptOrphelineEntries(final MenuFolder folder, final ProfileEntryItem entry) {
-        if (orphelineEntries.containsKey(entry.getId())) {
-            for (final ProfileEntryItem orphelineProfileEntry : orphelineEntries.remove(entry.getId())) {
-                folder.addLink(createLink(orphelineProfileEntry));
+    private void adoptOrphanEntries(final MenuFolder folder, final ProfileEntryItem entry) {
+        if (orphanEntries.containsKey(entry.getId())) {
+            for (final ProfileEntryItem orphanProfileEntry : orphanEntries.remove(entry.getId())) {
+                folder.addLink(createLink(orphanProfileEntry));
             }
         }
     }
@@ -128,7 +145,7 @@ public class MenuListCreator {
         }
 
         return new ProfileEntryNameAttributeReader(ProfileEntryItem.ATTRIBUTE_NAME, ProfileEntryItem.ATTRIBUTE_PAGE, BonitaPageItem.ATTRIBUTE_DISPLAY_NAME)
-                .read(entry);
+        .read(entry);
     }
 
     protected String getEntryUrlToken(final ProfileEntryItem entry) {
